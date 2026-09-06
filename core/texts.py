@@ -73,9 +73,10 @@ def build_members_text(group: dict, members: list[dict], lang: str) -> str:
         extra = ""
         if m.get("received_payout"):
             extra = t(lang, "members_line_received", period=m.get("payout_period"))
-        elif active_cycle and m.get("joined_period") == group.get("current_period") and group.get("current_period"):
-            # Added mid-cycle: their first round is the next one.
-            extra = t(lang, "members_line_next_round")
+        elif active_cycle and m.get("joined_period"):
+            # Joined mid-cycle: must back-pay rounds 1..joined_period before
+            # they can win a draw.
+            extra = t(lang, "members_line_backpay", period=m.get("joined_period"))
         lines.append(t(lang, "members_line", index=i, who=who, extra=extra))
     return "\n".join(lines)
 
@@ -163,7 +164,9 @@ def build_status_text(
         for c in sorted(contributions, key=lambda x: x.get("display_name") or ""):
             emoji = CONTRIB_EMOJI.get(c["status"], "⚪")
             who = format_user_identity(c.get("display_name"), c.get("username"), c["telegram_id"])
-            lines.append(f"{emoji} {who}")
+            member = members_by_id.get(c["telegram_id"]) or {}
+            note = t(lang, "status_backpay_note") if member.get("joined_period") else ""
+            lines.append(f"{emoji} {who}{note}")
 
         lines.extend(_received_so_far_lines(group, members, payouts or [], lang))
     elif group["status"] == "completed":

@@ -8,6 +8,7 @@ from aiogram.types import Message
 from core import config
 from core import timeutils
 from core.i18n import t
+from core.keyboards import build_participation_kb
 from core.pinning import announce_and_pin
 from core.texts import (
     build_next_round_text,
@@ -138,7 +139,8 @@ async def cmd_postpone(message: Message):
     )
     # Refresh the pinned message so the group always sees the exact time.
     text = build_next_round_text(group, group["current_period"], lang, group.get("seed_hash") or "", new_draw_at)
-    await announce_and_pin(message.bot, group["chat_id"], group["_id"], text)
+    kb = await build_participation_kb(message.bot, lang, group_id=group["_id"])
+    await announce_and_pin(message.bot, group["chat_id"], group["_id"], text, reply_markup=kb)
 
 
 @router.message(Command("payout", "markpaid"))
@@ -187,7 +189,8 @@ async def cmd_payout(message: Message):
         text = build_next_round_text(
             group, 1, lang, result["seed_hash"], result["draw_at"], cycle_number=result["cycle_number"]
         )
-        await announce_and_pin(message.bot, group["chat_id"], group["_id"], text)
+        kb = await build_participation_kb(message.bot, lang, group_id=group["_id"])
+        await announce_and_pin(message.bot, group["chat_id"], group["_id"], text, reply_markup=kb)
         when = timeutils.format_draw_time(result["draw_at"])
         members = await repo.list_members(group["_id"], active_only=True)
         for m in members:
@@ -211,7 +214,8 @@ async def cmd_payout(message: Message):
 
     # Next round opens: announce it and pin the exact next draw time.
     text = build_next_round_text(group, result["next_period"], lang, result["seed_hash"], result["draw_at"])
-    await announce_and_pin(message.bot, group["chat_id"], group["_id"], text)
+    kb = await build_participation_kb(message.bot, lang, group_id=group["_id"])
+    await announce_and_pin(message.bot, group["chat_id"], group["_id"], text, reply_markup=kb)
 
     when = timeutils.format_draw_time(result["draw_at"])
     members = await repo.list_members(group["_id"], active_only=True)

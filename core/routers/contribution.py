@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from core.i18n import t
-from core.keyboards import build_review_kb
+from core.keyboards import build_participation_kb, build_review_kb
 from core.texts import format_user_identity
 from core.timeutils import format_draw_time
 from db import repository as repo
@@ -15,66 +15,75 @@ async def _is_admin(user_id: int) -> bool:
     return await repo.is_user_admin(user_id)
 
 
+async def send_contribute_instructions(bot, chat_id: int, lang: str, telegram_id: int) -> None:
+    """List everything the user still owes (including mid-cycle back-pay,
+    oldest round first) plus payment methods and proof instructions. Used by
+    /contribute and by the ?start=contribute deep link from the group's
+    pinned Contribute button."""
+    pendings = await repo.list_pending_contributions_for_user(telegram_id)
+    if not pendings:
+        await bot.send_message(chat_id, t(lang, "no_pending_contribution"))
+        return
+
+    groups_by_id = {}
+    lines = []
+    for c in pendings:
+        g = groups_by_id.get(str(c["group_id"]))
+        if g is None:
+            g = await repo.get_group(c["group_id"])
+            groups_by_id[str(c["group_id"])] = g
+        state = t(lang, "state_awaiting_review") if c["status"] == "awaiting_review" else t(lang, "state_to_pay")
+        when = format_draw_time(g["draw_at"]) if g and g.get("draw_at") else ""
+        lines.append(t(
+            lang, "contribute_pending_line",
+            name=g["name"] if g else "?", period=c["period"],
+            amount=c["amount"], currency=g["currency"] if g else "", state=state, when=when,
+        ))
+
+    text = t(lang, "contribute_header", count=len(pendings)) + "\n" + "\n".join(lines)
+
+    payment_methods = await repo.list_payment_methods(active_only=True)
+    if payment_methods:
+        text += "\n\n" + t(lang, "payment_methods_header")
+        for pm in payment_methods:
+            text += f"\n• {pm['name']}: {pm['details']}"
+
+    text += "\n\n" + t(lang, "contribute_send_proof")
+    await bot.send_message(chat_id, text)
+
+
 @router.message(Command("contribute", "pay"))
 async def cmd_contribute(message: Message):
     lang = await repo.get_chat_language(message.chat.id)
     if message.chat.type != "private":
-        await message.answer(t(lang, "contribute_in_private"))
+        kb = await build_participation_kb(message.bot, lang)
+        await message.answer(t(lang, "contribute_in_private"), reply_markup=kb)
         return
 
-    contribution = await repo.find_awaiting_contribution_for_user(message.from_user.id)
-    if not contribution:
-        await message.answer(t(lang, "no_pending_contribution"))
-        return
-
-    group = await repo.get_group(contribution["group_id"])
-    if contribution["status"] == "awaiting_review":
-        await message.answer(t(lang, "contribution_already_submitted", name=group["name"] if group else "?"))
-        return
-
-    payment_methods = await repo.list_payment_methods(active_only=True)
-    when = ""
-    if group and group.get("draw_at"):
-        when = format_draw_time(group["draw_at"])
-    lines = [
-        t(
-            lang,
-            "contribute_instructions",
-            name=group["name"] if group else "?",
-            period=contribution["period"],
-            amount=contribution["amount"],
-            currency=group["currency"] if group else "",
-            when=when,
-        )
-    ]
-    if payment_methods:
-        lines.append("")
-        lines.append(t(lang, "payment_methods_header"))
-        for pm in payment_methods:
-            lines.append(f"• {pm['name']}: {pm['details']}")
-    lines.append("")
-    lines.append(t(lang, "contribute_send_proof"))
-    await message.answer("\n".join(lines))
+    await send_contribute_instructions(message.bot, message.chat.id, lang, message.from_user.id)
 
 
 @router.message(F.chat.type == "private", F.text | F.photo)
 async def catch_all_private_proof(message: Message):
     """Any non-command text or photo in a private chat is treated as
-    payment proof for whichever contribution the user still owes, if any."""
+    payment proof for the user's OLDEST outstanding round (back-pay is
+    consumed in round order), if any."""
     if message.text and message.text.startswith("/"):
         return
 
     lang = await repo.get_chat_language(message.chat.id)
-    contribution = await repo.find_awaiting_contribution_for_user(message.from_user.id)
-    if not contribution:
+    pendings = await repo.list_pending_contributions_for_user(message.from_user.id)
+    if not pendings:
         await message.answer(t(lang, "no_pending_contribution"))
         return
 
-    group = await repo.get_group(contribution["group_id"])
-
-    if contribution["status"] == "awaiting_review":
+    contribution = next((c for c in pendings if c["status"] == "pending"), None)
+    if contribution is None:  # everything is awaiting review already
+        group = await repo.get_group(pendings[0]["group_id"])
         await message.answer(t(lang, "contribution_already_submitted", name=group["name"] if group else "?"))
         return
+
+    group = await repo.get_group(contribution["group_id"])
 
     if message.photo:
         proof = {"type": "photo", "content": message.photo[-1].file_id}
@@ -82,7 +91,11 @@ async def catch_all_private_proof(message: Message):
         proof = {"type": "text", "content": message.text}
 
     await repo.submit_contribution_proof(contribution["_id"], proof)
-    await message.answer(t(lang, "proof_received", name=group["name"] if group else "?"))
+    remaining = sum(1 for c in pendings if c["status"] == "pending") - 1
+    if remaining > 0:
+        await message.answer(t(lang, "proof_received_with_remaining", name=group["name"] if group else "?", remaining=remaining))
+    else:
+        await message.answer(t(lang, "proof_received", name=group["name"] if group else "?"))
 
 
 @router.message(Command("pending", "pd"))

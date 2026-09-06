@@ -1,28 +1,86 @@
-# Partial Afaan Oromoo translations. Any key not listed here automatically
-# falls back to English (see core/i18n.py) — safe to extend gradually.
+# Afaan Oromoo — complete translation. Any key missing here falls back
+# to English (see core/i18n.py).
 
 language_name_en: "English"
 language_name_am: "አማርኛ"
 language_name_om: "Afaan Oromoo"
 
+# --- common ---
 start_welcome: |
-  👋 Baga nagaan gara Digital Equb bot dhufte!
+  👋 Baga nagaan gara Equb Dijitaalaa bot dhufte!
 
-  Equb jechuun garee qusannaa marsaa ti: hunda isaanii yeroo tokkoon tokkoon walqixa kaffalu, marsaa tokko keessatti miseensa tokko maallaqa walitti qabame guutuu ni argata — hanga hundi isaanii dabalatanitti.
+  Equb jechuun garee qusannaa marsaa ti: hundi isaanii marsaa tokkoon tokkoon walqixa kaffalu, marsaa tokko keessatti miseensa tokko ho'aa (lootirii)tiin maallaqa walitti qabame guutuu ni mo'ata — hanga hundi isaanii dabalatanitti.
 
-  Jalqabuuf bot kana gara garee keessanii dabalaa, ergasii /help achitti fayyadamaa.
+  Namni mo'atu eenyu akka ta'e namni tokko hin beeku — adminootus hanga yeroo ho'aatti.
+
+  Jalqabuuf bot kana gara garee keessaniitti dabalaa, ergasii /help fayyadami.
+help_text: |
+  <b>Qopheessuu (garee keessatti, admin qofaaf)</b>
+  /newequb Maqaa | baay'inaa | yeroo | [maallaqa] | [irra deebii] — Equb uumi. yeroo: weekly, biweekly, monthly ykn guyyaa N hunda (fakkeenya <code>3d</code>). irra deebii: <code>once</code> (durtii) ykn <code>auto</code> — marsaan xumurutti irratti ofumaan marsaa haaraa jalqaba.
+  Fakkeenya: <code>/newequb Equb Maatii | 500 | weekly | ETB | auto</code>
+
+  <b>Seenuu (garee keessatti)</b>
+  /joinequb — Equb seeni. Marsaan hojjetaa jiru yoo ta'e gandeen seenta: mo'uu dandeessuuf marsaa darban hunda kaffaluu si barbaachisa. Ergaa maxxanname irratti 💰 Kaffali fi ➕ Seeni qabdoolee jiru.
+  /addmember @user | user_id | reply — admin namni akkaataa addaa ta'e dabalata (seensa back-pay walfakkaata)
+  /leaveequb — marsaa jalqabanitti dura bahi
+  /members — miseensota ammaa tarreessi
+  /removemember — admin miseensa baasaa
+
+  <b>Marsaa bulchuu (garee keessatti, admin)</b>
+  /startcycle — miseensota cufi, marsaa 1 bani, yeroo ho'aa jalqabaa guutuu maxxansi (pin godhi)
+  /status — yeroo ho'aa ittiinuf, nama kaffale, kan mo'ate (kan darbe qofa) — nama ittiin mo'atu hin mul'atu; namni tokko hin beeku
+  /drawnow — nama kaffanee gidduutti yeroo ammaa ho'i
+  /postpone sa'aatii — ho'aa eegamu duubbaa deebisi (fakkeenya /postpone 24)
+  /payout — mo'ataan maallaqa argatee mirkaneessi; marsaa ittiinuf bana
+  /recipient — kan marsaa kana mo'ate (ykn yeroon ho'aa yommuu dhiyaatu)
+  /remind — marsaa kana kaffaluu dide hunda DM godhi
+  /history — seenaa kaffaltii guutuu Equb kanaa
+  /cancelequb — garee haqi
+  /listequbs — chat kana keessatti ho'amtan hundii tarreessi
+
+  <b>Ho'aawwaan akkamitti hojjetu</b>
+  Yeroon ho'aa beekamaan yommuu gahe, bot marsaa kana kaffalee mirkanaa'e gidduutti uumamaan mo'ataa filata — kaffaltiin mirkanaa'e hin qabne ho'aa sana keessaa haqama. Yeroon ho'aa guutuu yeroo hunda ergaa maxxanname irratti jira. Ho'aan hundi dogoggora-hin-qabne dha: seed hash yommuu marsaa banamu maxxannamee, seed bu'aa keessatti mul'atu.
+
+  <b>Kaffaluu (bot waliin dhuunfaan, kamiyyuu)</b>
+  /contribute — waan si irra jiru hunda (marsaa-marsaan, back-pay dabalatee) fi akkamitti kaffaltu ilaali
+  Ykn ergaa maxxanname irratti qabdoo 💰 Kaffali cuqaasi — chat kana siif banee siif agarsiisa.
+  Erga kaffalte booda ragaa kaffaltii (suuraa ykn lakkoofsa daldalaa) asitti naa ergi — gara marsaa kaffaltii hin qabne kee duraan tuqamaa keetii ramadama.
+
+  <b>Bulchiinsa admin</b>
+  /addadmin, /deladmin, /listadmins
+  /addpayment, /editpayment, /delpayment, /togglepayment, /listpayments
+
+  /language — afaan chat kanaa jijjiiri
 only_admin_can_change_language: "Afaan jijjiiruu kan danda'u admin qofa dha."
 choose_language: "Afaan filadhu:"
 language_set_confirmation: "✅ Afaan jijjiirameera."
 admins_only: "Adminoota qofaaf."
-no_open_group: "Chat kana keessatti Equb bananaan hin jiru. Adminiin /newequb fayyadamee eegaluu danda'a."
+group_commands_require_group_chat: "Ajaja kun Equbn akka jiru garee keessatti hojjeta; dhuunfaan hin hojjetu."
+no_open_group: "Chat kana keessatti Equb banaa ykn hojjetaa jiru hin jiru. Adminiin /newequb fayyadamee eegaluu danda'a."
 no_active_group: "Chat kana keessatti amma marsaa Equb hojjetaa jiru hin jiru."
 
-group_created: "✅ «{name}» (Equb #{number}) uumameera — miseensa tokkoof marsaa tokkoof {amount} {currency}. Miseensonni amma /joinequb godhuu danda'u."
-joined_group: "🙋 «{name}» seenteerta. Hanga ammaatti miseensota: {count}."
+# --- group lifecycle ---
+usage_newequb: |
+  Akkaataa fayyadamaa: <code>/newequb Maqaa | baay'inaa | yeroo | [maallaqa] | [irra deebii]</code>
+  yeroo: weekly, biweekly, monthly ykn guyyaa N hunda — fakkeenya <code>3d</code>, <code>14d</code>
+  maallaqa (filannoo): bakka baay'inaa cinaa mul'ata (durtii ETB)
+  irra deebii (filannoo): <code>once</code> (durtii) hundi yommuu argatu xumura; <code>auto</code> miseensota walfakkaatan waliin ofumaan marsaa haaraa jalqaba.
+  Fakkeenya: <code>/newequb Equb Maatii | 500 | weekly | ETB | auto</code>
+group_created: "✅ «{name}» (Equb #{number}) uumameera — miseensa tokkoof marsaa tokkoof {amount} {currency}. Miseensonni amma /joinequb godhuu danda'u. Hundi yommuu seenan adminiin /startcycle fayyadama."
+group_created_auto: "🔄 Irra deebiin ofumaa ON ta'eera: miseensi hundi maallaqa argatee booda, marsaa haaraan miseensota walfakkaatan waliin ofumaan jalqaba."
+joined_group: "🙋 «{name}» seenteerta. Hanga ammaa miseensota: {count}."
 left_group: "👋 «{name}» keessaa baateerta."
+not_a_member: "Ati miseensa «{name}» miti."
+usage_removemember: "Akkaataa fayyadamaa: /removemember &lt;telegram_id&gt; (ykn @username, ykn ergaa isaa irratti reply godhi)"
+member_removed: "Miseensi «{name}» irraa baafameera."
 members_title: "👥 Miseensota «{name}» ({count}):"
+members_line: "{index}. {who}{extra}"
+members_line_received: " — ✅ maallaqa walitti qabame fudhateera (marsaa {period})"
+members_line_backpay: " — ⏳ marsaa 1..{period} kaffalaa jira"
 group_cancelled: "🚫 «{name}» haqameera."
+no_groups_yet: "Chat kana keessatti hanga ammaatti Equb hin uumamne hin jiru."
+groups_list_title: "📋 Equboota chat kana keessa jiran:"
+group_summary_line: "#{number} {name} — {status} — {amount} {currency}/{frequency}"
 
 group_status_open: "banaa (seenuuf)"
 group_status_active: "hojjetaa jira"
@@ -31,24 +89,152 @@ group_status_cancelled: "haqameera"
 
 frequency_weekly: "torbanittii"
 frequency_biweekly: "torban lamaanitti"
-frequency_monthly: "ji'aan"
+frequency_monthly: "guyyaa 30 hunda"
+frequency_every_n_days: "guyyaa {n} hunda"
 
+# --- admin-added members / joining buttons ---
+usage_addmember: "Akkaataa fayyadamaa: /addmember @username — ykn /addmember &lt;telegram_id&gt; — ykn ergaa isaa irratti reply godhee /addmember barreessi"
+addmember_not_found: "❌ «{token}» hin argadhe. Telegram botoota username-n barbaachuu hin hayyamu — jalqaba garee kana keessatti ergaa kamuu akka erganii siin gaafadhu (akkkasumatti yaadadhaan), ykn lakkoofsa id isaanii fayyadami, ykn ergaa isaa irratti reply godhi."
+member_added: "✅ {who} «{name}» dabalameera."
+member_added_midcycle: "✅ {who} «{name}» dabalameera — marsaan hojjetaa jira; mo'uu dandeessuuf marsaa {period} darban hunda kaffaluu qaba."
+contribute_button: "💰 Kaffali"
+join_button: "➕ Seeni"
+joined_midcycle: "🙋 «{name}» seenteerta ({count} miseensota) — marsaan hojjetaa jira; mo'uu dandeessuuf marsaa {periods} darban hunda kaffaluu si barbaachisa. Qabdoo 💰 Kaffali fayyadami."
+
+# --- errors ---
+error_invalid_frequency: "Yeroon weekly, biweekly, monthly ykn guyyaa N hunda ta'uu qaba — fakkeenya 3d, 7d, 30d."
+error_order_mode_removed: "Equb kun amma akka ho'aa hojjeta — tartiiba beepila hin jiru. Mo'ataan marsaa tokkoon tokkoon yeroon ho'aa irratti uumamaan baata. Tartiiba keessaa balleessi: /newequb Maqaa | baay'inaa | yeroo"
+error_invalid_restart_mode: "Haalli irra deebiin 'once' ykn 'auto' ta'uu qaba."
+error_invalid_amount: "Baay'inni kaffaltii lakkoofsa ol-ka'aa ta'uu qaba."
+error_group_already_exists: "Chat kana keessatti Equb banaa ykn hojjetaa jiru jira. Xumuruu ykn /cancelequb erga godheetiin dura."
+error_group_not_open: "Kun Equbn seenuuf yommuu banaa yommuu hojjetaa jiru qofa hojjeta."
+error_already_member: "Fayyadamaan kun duraan miseensa garee kanaati."
+error_not_a_member: "Fayyadamaan kun miseensa hojjetaa jiru garee kanaa miti."
+error_not_enough_members: "Marsaa jalqabuu dura miseensota 2 ol si barbaachisa."
+error_group_already_terminal: "Gareen kun duraan xumureera ykn haqameera."
+error_group_not_active: "Marsaan garee kanaa hojjetaa jiru miti."
+error_no_payout_record: "Ammatti wanti mallatteessu hin jiru — mo'ataan marsaa kanaa hin baafamne. Yeroon ho'aa beekamaan ofumaan raawwata (ergaa maxxanname ilaali), ykn adminiin /drawnow fayyadamaa."
+error_already_paid: "Kaffaltiin marsaa kanaa duraan mallatteeffameera."
+error_member_already_paid_out: "Miseensi kun maallaqa walitti qabame marsaa kanaa fudhateera — galmee irraa baasuu hin danda'amu."
+error_member_is_current_winner: "Miseensi kun mo'ataa marsaa kanaa yoo ta'u ammatti hin kaffalamin. Jalqaba /payout fayyadami, booda baasi."
+error_no_eligible_members: "Marsaa kana keessatti kaffaltiin mirkanaa'e hin jiru — ho'uu danda'u namni hin jiru. Ragaalee /pending waliin mirkaneessi, ykn ho'aa /postpone godhi."
+error_nothing_to_draw: "Ammatti ho'aan eegamu hin jiru — mo'ataan marsaa kanaa mala duraan baate (uta /status ilaali)."
+error_join_cycle_ending: "Marsaan kun kaffaltii xumuraa irratti jira — seenuuf marsaa ittiinuu hin jiru. Adminiin /newequb waliin Equb haaraa akka jalqabu gaafadhu."
+
+# --- starting the cycle / rounds ---
+cycle_started_title: "🎲 <b>«{name}» jalqabeera!</b> (marsaa {cycle})"
+cycle_started_rules: "Marsaa tokkoon tokkoon, miseensi hunda {amount} {currency} kaffala. Maallaqa marsaa kanaa <b>{pool} {currency}</b> ta'ee, miseensa tokko ho'aan ni mo'ata."
+cycle_first_draw: "⏰ Ho'aan jalqabaa: <b>{when}</b> ({countdown})"
+cycle_pay_instructions: "💰 Ho'aa keessatti akka seenu marsaa dura kaffali: ragaa kaffaltii kee dhuunfaan naa ergi (/contribute). Kaffaltiin kee ho'aa dura yoo hin mirkanaa'in ho'aa sana keessaa haqamta."
+seed_commit_line: "🔒 Mirkaneessa haqaa — seed hash: <code>{hash}</code>"
+cycle_secret_note: "🤫 Mo'ataan yeroon ho'aa uumamaan baata — hanga sanaa namni tokko hin beeku, adminootus akka ta'e."
+next_round_title: "▶️ <b>Marsaa {period} kan «{name}» banameera.</b>"
+next_round_amount: "Miseensi hunda {amount} {currency} kaffala — ho'aa keessatti akka seenu marsaa dura kaffali."
+next_round_draw: "⏰ Ho'aa: <b>{when}</b> ({countdown})"
+cycle_new_cycle_line: "🔄 <b>«{name}» marsaa haaraa #{cycle} jalqachaa jira!</b> Miseensota walfakkaatan, ho'aawwaan haaraa — kan darbe mo'atanis irra deebiisan taphatu."
+
+# --- status board ---
 status_title: "📊 «{name}» (Equb #{number})"
+status_state: "Haala: {status}"
+status_amount: "Kaffaltii: miseensa tokkoof marsaa tokkoof {amount} {currency}"
+status_frequency: "Yeroo: {frequency}"
+status_members_open: "Miseensota bahan: {count}"
 status_waiting_to_start: "Adminiin /startcycle akka hojjetu eeggachaa jira."
+status_pool: "🪙 Maallaqa marsaa hunda: {amount} {currency} ({count} miseensota)"
+status_round: "Marsaa {period} — miseensota {total} keessaa {received} maallaqa fudhataniiru"
+status_next_draw: "⏰ Ho'aa ittiinuf: <b>{when}</b> ({countdown})"
+status_draw_overdue: "⚠️ Yeroon ho'aa darbere garuu kaffaltiin mirkanaa'e hin jiru. Adminiin kaffaltii boodee /drawnow ykn /postpone 24 fayyadamaa."
+status_secret_note: "🤫 Mo'ataan yeroon ho'aa uumamaan baata — hanga sanaa namni tokko hin beeku, adminootus akka ta'e."
+status_contributions_header: "Kaffaltii marsaa kanaa (🟢 mirkanaa'e = ho'aa keessa jira):"
+status_backpay_note: " — ⏳ marsaa darban kaffalaa jira (hang'i kaffalutti hin mo'atu)"
+status_received_header: "🏆 Maallaqa fudhatan irratti:"
+status_received_line: "Marsaa {period}: {who}"
+status_period: "Marsaa {period} kan {total}"
+status_recipient: "Fudhataan marsaa kanaa: {who} — {amount} {currency}"
+status_payout_state: "Haala kaffaltii: {state}"
+status_completed_msg: "🎉 Equbn kun xumurameera — ho'aawwaan {total} raawwatame, miseensota hundi maallaqa isaanii fudhataniiru."
 payout_paid: "kaffalameera ✅"
 payout_pending: "eeggataa jira ⏳"
 
-contribute_in_private: "Maaloo dhuunfaan ergaa naa ergaa, achittis /contribute fayyadamaa."
-no_pending_contribution: "Yeroo ammaa kaffaltiin Equb si eeggatu hin jiru."
-contribute_send_proof: "Erga kaffaltee booda, ragaa kaffaltii (suuraa ykn lakkoofsa daldalaa) asitti naa ergi."
-proof_received: "✅ Ragaan «{name}» siif argameera — adminootaaf ergameera."
+# --- draws ---
+draw_result_title: "🎉 <b>Ho'aan xumurameera</b> — «{name}», marsaa {period}"
+draw_result_winner: "🎊 {who} maallaqa <b>{amount} {currency}</b> moatteera!"
+draw_result_eligible_count: "Ho'aa dura kaffaltiin isaanii mirkanaa'e miseensota {count} gidduutti filatameera."
+payout_admin_note: "👩‍💼 Admin: mo'ataan maallaqa dhugumatti argate /poadhii — /payout fayyadamee mallatteessi; marsaa ittiinuf bana."
+draw_verification: "🔍 <b>Ofiin mirkaneessi:</b> seed <code>{seed}</code> (sha256 = hash qindaa'ina marsaa banametti maxxanname <code>{hash}</code> waliin wal sima). Mo'ataa = sorted([{ids}]) Random(seed)tiin filame."
+draw_overdue_group: "⏰ Yeroo ho'aa «{name}» (marsaa {period}) darbere, garuu kaffaltiin mirkanaa'e hin jiru. Kaffaltii boodee adminiin /drawnow ykn /postpone 24 fayyadamaa."
+draw_overdue_admin_dm: "⏰ «{name}» (marsaa {period}): yeroon ho'aa darbere, kaffaltiin ZERO. Filannoo: ragaalee /pending waliin mirkaneessi ergasii /drawnow — ykn garee keessatti /postpone 24."
+overdue_eligible_admin_dm: "🔔 «{name}» (marsaa {period}): miseensonni {count} yeroo darbee booda kaffaltii isaanii mirkaneessaniiru. Garee keessatti /drawnow fayyadamii ho'i, ykn kanneen biraa yeroo kennuuf /postpone 24."
+pre_draw_review_reminder: "⏰ Yaadannoo: «{name}» (marsaa {period}) ho'aan {when} ti, ragaa kaffaltii {count} ammatti ilaalchaa jira. Mirkanaa'e hin qabne ho'aa keessaa haqamu — garee keessatti /pending fayyadami."
+dm_you_won: "🎉 Baga gamaddan! Ho'aa «{name}» marsaa {period} moatteetta: <b>{amount} {currency}</b>! Gareetti beeksiseera — adminiin maallaqa kee siif hir'ata."
+dm_cycle_started: "🚀 «{group_name}» jalqabeera! Kaffaltii jalqabaa kee {amount} {currency} si irra jira. Ragaa kanaan ergi, ykn ibsaaf /contribute fayyadami.\n⏰ Ho'aan jalqabaa: {when} — dura kaffaliifi mirkaneessi!"
+pin_permission_missing: "⚠️ Ergaa maxxanuu hin dandeenne — yeroon ho'aa yeroo hunda akka mul'atuuf garee kana keessatti mirga admin \"Pin Messages\" naa kenni."
 
-cycle_completed: "🏁 «{name}» marsaa isaa guutuu xumureera — miseensonni hundi kaffaltii isaanii argataniiru. Baga gammaddan!"
+# --- recipient / payout ---
+recipient_winner_info: "🎯 Mo'ataa marsaa {period}: {who} — {amount} {currency} ({state})"
+recipient_pending_info: "⏳ Mo'ataan marsaa kanaa hin baafamne.\n⏰ Ho'aa: {when} ({countdown})\n🤫 Hang'i sanaa namni tokko hin beeku."
+payout_announcement: "🎊 «{name}» — maallaqa marsaa {period} {amount} {currency} {who} dhaqqabe!"
+dm_payout_received: "🎉 Kaffaltii Equb «{name}» si ga'eera: {amount} {currency}. Mee admin waliin mirkaneessi."
+cycle_completed: "🏁 «{name}» marsaa isaa guutuu xumureera — miseensonni hundi maallaqa isaanii argataniiru. Baga gammaddan! Adminiin /newequb waliin haaraa jalqachuu danda'a (gaaffii: yeroo itti'aanaa 'auto' fayyadami)."
+period_advanced: "▶️ Amma marsaa {period} kan {total} keessa jirna."
+dm_new_period: "📆 «{name}» — marsaa {period} banameera. Kaffaltiin kee {amount} {currency} si irra jira. Ragaa kanaan ergi, ykn /contribute fayyadami.\n⏰ Ho'aa: {when} — dura mirkaneessi!"
+dm_new_cycle: "🔄 «{name}» marsaa haaraa (#{cycle}) jalqabeera! Kaffaltiin kee marsaa 1 {amount} {currency} si irra jira. Ragaa kanaan ergi, ykn /contribute fayyadami.\n⏰ Ho'aan jalqabaa: {when} — dura mirkaneessi!"
+usage_postpone: "Akkaataa fayyadamaa: /postpone &lt;sa'aatii&gt; — fakkeenya /postpone 24 (durtii {default})."
+draw_postponed: "⏩ Ho'aan duubbaa deebi'era. Yeroo ho'aa haaraa: <b>{when}</b> ({countdown})."
 everyone_contributed: "Hundi isaanii marsaa kana kaffalaniiru."
+dm_reminder: "⏰ Yaadannoo: kaffaltiin kee «{name}» (marsaa {period}) {amount} {currency} ammatti hafe. Ragaa kanaan ergi — kaffaltiin mirkanaa'e hin qabne ho'aa keessaa haqama."
+reminders_sent: "Miseensota {count}f yaadannoo ergameera."
+no_payout_history: "Garee kanaaf hanga ammaatti kaffaltiin galmeefame hin jiru."
+history_title: "📜 Seenaa kaffaltii — «{name}»"
+history_line: "Marsaa {period}: {who} — {amount} {currency} ({state})"
 
-# --- lottery ---
-frequency_every_n_days: "guyyaa {n} qofaatti"
-status_next_draw: "⏰ Ho'aa ittiinuf: <b>{when}</b> ({countdown})"
-status_secret_note: "🤫 Moostaan yeroo ho'aatiin haadhu — hanga sanaa namni tokko hin beeku, adminootus akka ta'e."
-draw_result_winner: "🎊 {who} <b>{amount} {currency}</b> moatteera!"
-dm_you_won: "🎉 Baga gamaddan! Ho'aa «{name}» marsaa {period} moatteetta: <b>{amount} {currency}</b>!"
+# --- contributing ---
+contribute_in_private: "Mee kaffaltii kee dhiyeessuuf dhuunfaan naa ergi — qabdoo jalaa cuqaasuukeen, chat keenya siif bana."
+no_pending_contribution: "Yeroo ammaa kaffaltiin Equb si eeggatu hin jiru."
+contribution_already_submitted: "Ragaan kee «{name}»f duraan ergameera — adminoota ilaalchaaf eeggataa jira."
+contribute_header: "💰 Kaffaltii si irra jiran {count}:"
+contribute_pending_line: "• «{name}» — marsaa {period}: {amount} {currency} ({state}) — ho'aa: {when}"
+state_to_pay: "amma kaffali 💰"
+state_awaiting_review: "ilaalchaaf eegataa jira ⏳"
+payment_methods_header: "Karaa kaffaltii:"
+contribute_send_proof: "Erga kaffalte booda suuraa ykn lakkoofsa daldalaa iddoo kanaatti naa ergi — gara marsaa kaffaltii hin qabne keetti ofumaan ramada."
+proof_received: "✅ Naa argameera — ragaan kee «{name}»f adminootaaf ergameera."
+proof_received_with_remaining: "✅ Naa argameera — ragaan kee «{name}»f adminootaaf ergameera. Marsaa {remaining} hafan kaffaluu qabda."
+no_pending_reviews: "Ilaalchaaf eegamu kaffaltii hin jiru."
+pending_review_line: "{who}\nMarsaa {period} — {amount} {currency}"
+pending_review_proof_text: "Ragaa: {proof}"
+review_result_verified: "✅ Mirkanaa'e"
+review_result_rejected: "❌ Didesse"
+dm_contribution_verified: "✅ Kaffaltiin kee «{name}» (marsaa {period}, {amount} {currency}) mirkanaa'eera — ho'aa marsaa kanaa keessa jirta. Galatoomi!"
+dm_contribution_rejected: "❌ Ragaa kaffaltii kee «{name}» (marsaa {period}, {amount} {currency}) didameera. Admin waliin haasawaafi /contribute fayyadamii irra deebi'i."
+
+# --- admin management ---
+usage_addadmin: "Akkaataa fayyadamaa: /addadmin &lt;telegram_id&gt;"
+admin_added: "✅ {admin_id} admin ta'eera."
+usage_deladmin: "Akkaataa fayyadamaa: /deladmin &lt;telegram_id&gt;"
+admin_removed: "✅ {admin_id} admin ta'uu isaa baafameera."
+admins_list_header: |
+  Adminoota ammaa:
+  {list}
+usage_chat: "Akkaataa fayyadamaa: /chat &lt;telegram_id&gt; &lt;barreeffama&gt;  (ykn ergaa irratti reply godhee /chat &lt;telegram_id&gt;)"
+chat_sent: "✅ Ergaan ergameera."
+chat_send_failed: "❌ Ergaan erguu hin dandeene — fayyadamaan bot waliin chat jalqabuu mala."
+chat_need_reply_or_text: "Ergaa irratti reply godhi, ykn barreeffama keni: /chat &lt;telegram_id&gt; &lt;barreeffama&gt;"
+chat_forwarded: "✅ Ergaan gadi-dhiyeessameera."
+chat_forward_failed: "❌ Ergaan gadi-dhiyeessuu hin dandeene."
+
+# --- payment methods ---
+usage_addpayment: "Akkaataa fayyadamaa: /addpayment Maqaa | Ibsa\nFakkeenya: /addpayment Telebirr | 09xxxxxxxx"
+payment_added: "✅ Karaan kaffaltii dabalame (id {payment_id}): {name}"
+usage_editpayment: "Akkaataa fayyadamaa: /editpayment &lt;id&gt; | Maqaa | Ibsa"
+payment_not_found: "Karaan kaffaltii hin argamne."
+payment_updated: "✅ Karaan kaffaltii fooyye'ameera: {name}"
+usage_delpayment: "Akkaataa fayyadamaa: /delpayment &lt;id&gt;"
+payment_removed: "✅ Karaan kaffaltii haqameera."
+usage_togglepayment: "Akkaataa fayyadamaa: /togglepayment &lt;id&gt;"
+state_active: "hojjetaa"
+state_inactive: "dhaabbataa"
+payment_toggled: "✅ {name} amma {state} dha."
+payment_list_empty: "Karaan kaffaltii hin qindaa'in. /addpayment waliin dabalaa."
+payment_list_header: "💳 Karaa kaffaltii:"
+payment_list_line: "[{payment_id}] {name}: {details} ({state})"

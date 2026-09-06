@@ -459,6 +459,32 @@ async def list_member_groups(telegram_id: int, statuses: Optional[List[str]] = N
 # Contributions
 # ---------------------------------------------------------------------------
 
+async def create_contribution(
+    group_id, cycle_number: Optional[int], period: int, member: dict, amount: int
+) -> dict:
+    """A single contribution doc — used for mid-cycle back-pay (a member who
+    joins during an active cycle must pay every round since it started)."""
+    db = get_db()
+    doc = {
+        "group_id": _oid(group_id),
+        "cycle_number": cycle_number,
+        "period": period,
+        "telegram_id": member["telegram_id"],
+        "username": member.get("username"),
+        "display_name": member.get("display_name"),
+        "amount": amount,
+        "status": "pending",
+        "proof": None,
+        "created_at": utcnow(),
+        "submitted_at": None,
+        "reviewed_at": None,
+        "reviewed_by": None,
+    }
+    result = await db.equb_contributions.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return doc
+
+
 async def create_period_contributions(
     group_id, period: int, members: List[dict], amount: int, cycle_number: Optional[int] = None
 ) -> None:
@@ -487,11 +513,12 @@ async def create_period_contributions(
         await db.equb_contributions.insert_many(docs)
 
 
-async def get_contribution(group_id, period: int, telegram_id: int) -> Optional[dict]:
+async def get_contribution(group_id, period: int, telegram_id: int, cycle_number: Optional[int] = None) -> Optional[dict]:
     db = get_db()
-    return await db.equb_contributions.find_one(
-        {"group_id": _oid(group_id), "period": period, "telegram_id": telegram_id}
-    )
+    query: dict = {"group_id": _oid(group_id), "period": period, "telegram_id": telegram_id}
+    if cycle_number is not None:
+        query["cycle_number"] = cycle_number
+    return await db.equb_contributions.find_one(query)
 
 
 async def get_contributions_for_period(group_id, period: int, cycle_number: Optional[int] = None) -> List[dict]:
@@ -511,6 +538,22 @@ async def get_verified_member_ids(group_id, period: int, cycle_number: Optional[
     return await db.equb_contributions.distinct("telegram_id", query)
 
 
+async def member_has_unverified_contributions(group_id, cycle_number, telegram_id: int) -> bool:
+    """True if the member has ANY non-verified contribution in this cycle —
+    a mid-cycle joiner must back-pay every round since the cycle started
+    before they can win a draw."""
+    db = get_db()
+    query: dict = {
+        "group_id": _oid(group_id),
+        "telegram_id": telegram_id,
+        "status": {"$ne": "verified"},
+    }
+    if cycle_number is not None:
+        query["cycle_number"] = cycle_number
+    found = await db.equb_contributions.find_one(query, {"_id": 1})
+    return found is not None
+
+
 async def submit_contribution_proof(contribution_id, proof: dict) -> None:
     db = get_db()
     await db.equb_contributions.update_one(
@@ -519,29 +562,36 @@ async def submit_contribution_proof(contribution_id, proof: dict) -> None:
     )
 
 
-async def find_awaiting_contribution_for_user(telegram_id: int) -> Optional[dict]:
-    """The most recent contribution this user still needs to act on (pending
-    submission or awaiting review), across every active group they're in and
-    the CURRENT cycle of each — used to match a private-chat message/photo
-    to the right record."""
+async def _pending_contribution_query(telegram_id: int) -> List[dict]:
+    """Contributions the user still needs to act on (pending submission or
+    awaiting review), across every active group they're in and the CURRENT
+    cycle of each, oldest debt first — so back-pay proofs are matched in
+    round order and no round gets skipped."""
     db = get_db()
     active_groups = await db.equb_groups.find(
         {"status": "active"}, {"_id": 1, "cycle_number": 1}
     ).to_list(length=1000)
     if not active_groups:
-        return None
+        return []
     or_clause = [
         {"group_id": g["_id"], "cycle_number": g.get("cycle_number", 1)}
         for g in active_groups
     ]
-    return await db.equb_contributions.find_one(
+    cursor = db.equb_contributions.find(
         {
             "telegram_id": telegram_id,
             "$or": or_clause,
             "status": {"$in": ["pending", "awaiting_review"]},
         },
-        sort=[("created_at", -1)],
+        sort=[("period", 1), ("created_at", 1)],
     )
+    return await cursor.to_list(length=200)
+
+
+async def list_pending_contributions_for_user(telegram_id: int) -> List[dict]:
+    """Every contribution the user still owes or has submitted for review,
+    oldest first — shown by /contribute."""
+    return await _pending_contribution_query(telegram_id)
 
 
 async def get_awaiting_review_contributions(group_id, cycle_number: Optional[int] = None) -> List[dict]:

@@ -69,14 +69,17 @@ Add the bot to a group, then:
    `weekly`, `biweekly`, `monthly`, or every N days (`3d`, `14d`, …).
 2. Everyone who wants in runs `/joinequb` — or an admin adds specific
    people with `/addmember @username` (or a numeric id, or by replying
-   to one of their messages).
+   to one of their messages). The pinned announcement also carries
+   **💰 Contribute** and **➕ Join** buttons.
 3. An admin runs `/startcycle` — membership is locked, the exact first
-   draw date & time is announced **and pinned**, and the round's
-   fairness commitment (seed hash) is published. No order and no
-   pre-known winner exists.
+   draw date & time is announced **and pinned** (with the buttons), and
+   the round's fairness commitment (seed hash) is published. No order and
+   no pre-known winner exists.
 4. Each member DMs the bot their payment proof (a screenshot or a typed
    transaction ID) — either after running `/contribute` for instructions,
-   or just by sending it directly.
+   by tapping the **💰 Contribute** button on the pinned message (it opens
+   the bot's DM for you, and starts the bot first if necessary), or just
+   by sending the proof directly.
 5. An admin runs `/pending` in the group to review proofs with
    Approve/Reject buttons. **Only verified payments are in the draw.**
    The bot DMs admins ~1 hour before each draw if proofs are still
@@ -195,7 +198,7 @@ or a `systemd` unit running `python main.py` with `RUN_MODE=polling`.
 | --- | --- |
 | `/newequb Name \| amount \| frequency \| [currency] \| [restart]` | Create a group. `frequency`: `weekly`, `biweekly`, `monthly`, or every N days (`3d`, `14d`, …). `restart` (optional): `once` (default — ends when everyone got the pool) or `auto` (a fresh cycle starts immediately with the same members). |
 | `/startcycle` (`/sc`) | Lock membership, open round 1, schedule + pin the first draw time |
-| `/addmember @user\|user_id\|reply` | Add a specific person — works while open (joins immediately) or mid-cycle (joins from the next round) |
+| `/addmember @user\|user_id\|reply` | Add a specific person — while open they join immediately; mid-cycle they follow the same back-pay rule as `/joinequb` |
 | `/removemember @user\|user_id\|reply` | Remove someone; mid-cycle removal is blocked if they already received a pool or are the current round's drawn winner |
 | `/cancelequb` | Cancel the group entirely |
 
@@ -203,9 +206,20 @@ or a `systemd` unit running `python main.py` with `RUN_MODE=polling`.
 
 | Command | Purpose |
 | --- | --- |
-| `/joinequb` (`/join`) | Join the currently open group |
+| `/joinequb` (`/join`) | Join the Equb — while it's open, or MID-CYCLE (see below) |
 | `/leaveequb` (`/leave`) | Leave before the cycle starts |
-| `/members` (`/listmembers`) | List current members (with received-pool badges) |
+| `/members` (`/listmembers`) | List current members (with received-pool and back-pay badges) |
+
+**Joining mid-cycle (back-pay).** The ➕ Join button on the pinned message
+and `/joinequb` both work while a cycle is running — important for
+`restart=auto` groups, which are effectively always active. To keep the
+lottery fair, a mid-cycle joiner must **back-pay every round the cycle
+has already run** (they get a pending contribution for each missed round,
+paid privately round by round) and stay paid-up every round after. Until
+their back-pay is complete they contribute but can't win a draw — this
+closes the loophole where someone joins after everyone else had received
+their pool and wins a full pool having paid once. A `once` cycle in its
+final drawn round refuses joins (there's no next round left for them).
 
 ### Running the cycle (group chat, admin unless noted)
 
@@ -225,13 +239,17 @@ or a `systemd` unit running `python main.py` with `RUN_MODE=polling`.
 
 | Command | Purpose |
 | --- | --- |
-| `/contribute` (`/pay`) | See what you owe this round, the pay-by draw time, and how to pay |
+| `/contribute` (`/pay`) | See everything you owe — round by round, including back-pay — and how to pay |
 
-After that, just send the bot your payment proof — a photo or a typed
-transaction ID — as a normal message. It's matched to your open
-contribution automatically; no command needed. **Get verified before the
-draw: unverified members are excluded from that round's draw** (they stay
-eligible for later rounds).
+The **💰 Contribute** button on the group's pinned message is the fastest
+path: it deep-links into the bot's DM (`t.me/<bot>?start=contribute`) and
+immediately shows what you owe — Telegram makes users press START first if
+they've never started the bot, which is exactly what proof submission
+requires. After that, just send your payment proof — a photo or a typed
+transaction ID — as a normal message; it's matched to your **oldest
+unpaid round** automatically. **Get verified before the draw: unverified
+members are excluded from that round's draw** (they stay eligible for
+later rounds).
 
 ### Admin & payment method management
 
@@ -325,7 +343,8 @@ tests/                         pytest suite for the pure logic
   sequential way.
 - **equb_members** — one doc per (group, user). Tracks whether they've
   received their pool yet and in which round; `joined_period` records
-  mid-cycle additions (they play from the next round).
+  mid-cycle additions (they must back-pay rounds 1..joined_period before
+  they can win a draw; reset when a new cycle starts).
 - **equb_contributions** — one doc per (group, round, user):
   `pending` → `awaiting_review` → `verified` | `rejected`.
 - **equb_payouts** — one doc per (group, round), **created at draw time**

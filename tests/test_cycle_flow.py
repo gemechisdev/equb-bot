@@ -12,8 +12,11 @@ or its received-payout flags.
 import asyncio
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from db import repository as repo
 from services import draw_service, equb_service
+from services.equb_service import EqubError
 
 
 class FakeMessage:
@@ -145,6 +148,15 @@ class MemoryRepo:
         return next((m for m in self.members
                      if m["group_id"] == gid and m["telegram_id"] == telegram_id and m["status"] == "active"), None)
 
+    async def reactivate_member(self, gid, telegram_id, joined_period):
+        m = next((m for m in self.members
+                  if m["group_id"] == gid and m["telegram_id"] == telegram_id and m["status"] == "removed"), None)
+        if not m:
+            return False
+        m["status"] = "active"
+        m["joined_period"] = joined_period
+        return True
+
     async def list_members(self, gid, active_only=True):
         return [m for m in self.members
                 if m["group_id"] == gid and (not active_only or m["status"] == "active")]
@@ -163,12 +175,23 @@ class MemoryRepo:
         m["payout_period"] = period
 
     # --- contributions ---
+    async def create_contribution(self, gid, cycle_number, period, member, amount):
+        c = {"_id": self._id(), "group_id": gid, "cycle_number": cycle_number, "period": period,
+             "telegram_id": member["telegram_id"], "status": "pending", "amount": amount}
+        self.contributions.append(c)
+        return c
+
     async def create_period_contributions(self, gid, period, members, amount, cycle_number=None):
         for m in members:
             self.contributions.append({
                 "group_id": gid, "cycle_number": cycle_number, "period": period,
                 "telegram_id": m["telegram_id"], "status": "pending", "amount": amount,
             })
+
+    async def get_contribution(self, gid, period, telegram_id, cycle_number=None):
+        return next((c for c in self.contributions
+                     if c["group_id"] == gid and c["period"] == period and c["telegram_id"] == telegram_id
+                     and (cycle_number is None or c.get("cycle_number") == cycle_number)), None)
 
     async def get_contributions_for_period(self, gid, period, cycle_number=None):
         return [c for c in self.contributions
@@ -179,6 +202,17 @@ class MemoryRepo:
         return [c["telegram_id"] for c in self.contributions
                 if c["group_id"] == gid and c["period"] == period and c["status"] == "verified"
                 and (cycle_number is None or c.get("cycle_number") == cycle_number)]
+
+    async def member_has_unverified_contributions(self, gid, cycle_number, telegram_id):
+        return any(c["group_id"] == gid and c["telegram_id"] == telegram_id
+                   and c["status"] != "verified"
+                   and (cycle_number is None or c.get("cycle_number") == cycle_number)
+                   for c in self.contributions)
+
+    async def list_pending_contributions_for_user(self, telegram_id):
+        docs = [c for c in self.contributions
+                if c["telegram_id"] == telegram_id and c["status"] in ("pending", "awaiting_review")]
+        return sorted(docs, key=lambda c: (c["period"], c.get("cycle_number") or 0))
 
     # --- payouts ---
     async def get_payout(self, gid, period, cycle_number=None):
@@ -284,6 +318,135 @@ class TestFullLotteryCycle:
         self._verify(mem, group["_id"], 1, [1, 2, 3], cycle=2)
         r4 = await draw_service.run_draw(bot, g)
         assert r4["drawn"] and r4["winner_id"] in (1, 2, 3)
+
+    def _verify(self, mem, gid, period, tids, cycle=None):
+        for c in mem.contributions:
+            if (c["group_id"] == gid and c["period"] == period and c["telegram_id"] in tids
+                    and (cycle is None or c.get("cycle_number") == cycle)):
+                c["status"] = "verified"
+
+
+class TestMidCycleJoinBackPay:
+    """A member joining an already-running cycle must back-pay every round
+    since the cycle started before they can win a draw — otherwise someone
+    could join after everyone else had received their pool and win a full
+    pool having paid only one contribution."""
+
+    def test_backpay_gates_eligibility(self, monkeypatch):
+        mem = _patch_repo(monkeypatch)
+        _run(self._flow(mem))
+
+    async def _flow(self, mem):
+        bot = FakeBot()
+        args = equb_service.parse_newequb_args("Family | 100 | 1d | ETB | auto")
+        group = await equb_service.create_group(
+            chat_id=-100, creator={"telegram_id": 1, "username": "a", "display_name": "A"}, **args
+        )
+        for tid, name in [(2, "Bony"), (3, "Chala")]:
+            await equb_service.join_group(group, {"telegram_id": tid, "username": name.lower(), "display_name": name})
+        await equb_service.start_cycle(group)
+        g = await repo.get_group(group["_id"])
+
+        # Round 1 runs among the founders only.
+        self._verify(mem, group["_id"], 1, [1, 2, 3])
+        r1 = await draw_service.run_draw(bot, g)
+        assert r1["drawn"] and r1["winner_id"] in (1, 2, 3)
+        await equb_service.mark_payout_and_advance(g, 999)
+        g = await repo.get_group(group["_id"])
+
+        # Newcomer joins mid-cycle (round 2): gets back-pay docs for rounds 1..2.
+        result = await equb_service.join_group(group, {"telegram_id": 4, "username": "d", "display_name": "D"})
+        assert result["backpay_periods"] == [1, 2]
+        assert (await repo.get_member(group["_id"], 4))["joined_period"] == 2
+
+        # Round 2: founders verified; newcomer verifies round 2 ONLY —
+        # they must NOT be in the draw until the back-pay is complete.
+        self._verify(mem, group["_id"], 2, [1, 2, 3, 4])
+        r2 = await draw_service.run_draw(bot, g)
+        assert r2["drawn"] and r2["winner_id"] != 4
+        await equb_service.mark_payout_and_advance(g, 999)
+        g = await repo.get_group(group["_id"])
+
+        # Round 3: newcomer pays up (rounds 1, 2 and now 3) — now eligible.
+        self._verify(mem, group["_id"], 3, [1, 2, 3, 4])
+        r3 = await draw_service.run_draw(bot, g)
+        assert r3["drawn"] and r3["winner_id"] in {1, 2, 3, 4} - {r1["winner_id"], r2["winner_id"]}
+
+    def test_joining_after_all_pools_paid_cannot_win_early(self, monkeypatch):
+        mem = _patch_repo(monkeypatch)
+        _run(self._exploit_flow(mem))
+
+    async def _exploit_flow(self, mem):
+        """The corner case that motivated back-pay: someone joins when all
+        other members have already received their pool. With naive
+        next-round semantics they'd be the only unreceived member and
+        guaranteed to win a full pool having paid once. Back-pay prevents
+        it: they must pay every round of the new cycle before winning."""
+        bot = FakeBot()
+        args = equb_service.parse_newequb_args("Family | 100 | 1d | ETB | auto")
+        group = await equb_service.create_group(
+            chat_id=-100, creator={"telegram_id": 1, "username": "a", "display_name": "A"}, **args
+        )
+        await equb_service.join_group(group, {"telegram_id": 2, "username": "b", "display_name": "B"})
+        await equb_service.start_cycle(group)
+        g = await repo.get_group(group["_id"])
+
+        # Both founders receive their pools; auto-restart opens cycle 2.
+        self._verify(mem, group["_id"], 1, [1, 2])
+        r1 = await draw_service.run_draw(bot, g)
+        await equb_service.mark_payout_and_advance(g, 999)
+        g = await repo.get_group(group["_id"])
+        self._verify(mem, group["_id"], 2, [1, 2])
+        r2 = await draw_service.run_draw(bot, g)
+        assert {r1["winner_id"], r2["winner_id"]} == {1, 2}
+        r = await equb_service.mark_payout_and_advance(g, 999)
+        assert r["completed"] and r["restarted"]
+        g = await repo.get_group(group["_id"])
+        assert g["cycle_number"] == 2 and g["current_period"] == 1
+
+        # Someone joins the fresh cycle: their back-pay is just the current
+        # round (the cycle has only run one round) — fair, not exploitable.
+        result = await equb_service.join_group(g, {"telegram_id": 5, "username": "e", "display_name": "E"})
+        assert result["backpay_periods"] == [1]
+
+        # Founders verified for the new round; the newcomer isn't yet:
+        # they must NOT be in the draw.
+        self._verify(mem, group["_id"], 1, [1, 2], cycle=2)
+        r3 = await draw_service.run_draw(bot, g)
+        assert r3["drawn"] and r3["winner_id"] in (1, 2)
+
+        # Once the newcomer pays their round, they're eligible for future draws.
+        self._verify(mem, group["_id"], 1, [5], cycle=2)
+        eligible = await draw_service.compute_eligible_ids(g, 1)
+        assert 5 in eligible
+
+    def test_join_blocked_on_ending_once_cycle(self, monkeypatch):
+        """A 'once' cycle whose final round is already drawn has no next
+        round — joining would trap the joiner into back-paying a cycle
+        that's about to complete. Must be refused."""
+        mem = _patch_repo(monkeypatch)
+        _run(self._ending_flow(mem))
+
+    async def _ending_flow(self, mem):
+        args = equb_service.parse_newequb_args("Family | 100 | 1d")
+        group = await equb_service.create_group(
+            chat_id=-100, creator={"telegram_id": 1, "username": "a", "display_name": "A"}, **args
+        )
+        await equb_service.join_group(group, {"telegram_id": 2, "username": "b", "display_name": "B"})
+        await equb_service.start_cycle(group)
+        g = await repo.get_group(group["_id"])
+
+        self._verify(mem, group["_id"], 1, [1, 2])
+        r1 = await draw_service.run_draw(bot := FakeBot(), g)
+        await equb_service.mark_payout_and_advance(g, 999)
+        g = await repo.get_group(group["_id"])
+        self._verify(mem, group["_id"], 2, [1, 2])
+        r2 = await draw_service.run_draw(bot, g)  # final round drawn...
+        assert g["draw_state"] == "drawn"         # ...but not yet paid out
+
+        with pytest.raises(EqubError) as e:
+            await equb_service.join_group(g, {"telegram_id": 5, "username": "e", "display_name": "E"})
+        assert e.value.args[0] == "join_cycle_ending"
 
     def _verify(self, mem, gid, period, tids, cycle=None):
         for c in mem.contributions:

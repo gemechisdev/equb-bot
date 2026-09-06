@@ -1,17 +1,26 @@
 from aiogram import F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import CallbackQuery, Message
 
 from core.i18n import SUPPORTED_LANGS, t
 from core.keyboards import build_language_kb
+from core.routers.contribution import send_contribute_instructions
 from db import repository as repo
 
 router = Router(name="common")
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
+async def cmd_start(message: Message, command: CommandObject):
     lang = await repo.get_chat_language(message.chat.id)
+
+    # Deep link from the pinned Contribute button (t.me/<bot>?start=contribute):
+    # opens the bot's DM — starting it first if necessary — and immediately
+    # asks for the payment proof instead of showing the generic welcome.
+    if command.args == "contribute" and message.chat.type == "private":
+        await send_contribute_instructions(message.bot, message.chat.id, lang, message.from_user.id)
+        return
+
     await message.answer(t(lang, "start_welcome"))
 
 

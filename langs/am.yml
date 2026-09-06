@@ -1,10 +1,11 @@
-# Partial Amharic translations. Any key not listed here automatically
-# falls back to English (see core/i18n.py) — safe to extend gradually.
+# Amharic (አማርኛ) — complete translation. Any key missing here falls back
+# to English (see core/i18n.py).
 
 language_name_en: "English"
 language_name_am: "አማርኛ"
 language_name_om: "Afaan Oromoo"
 
+# --- common ---
 start_welcome: |
   👋 እንኳን ወደ ዲጂታል እቁብ ቦት በደህና መጡ!
 
@@ -12,19 +13,74 @@ start_welcome: |
 
   አሸናፊው ማን እንደሚሆን ማንም አያውቅም — አድሚኖችም እስከ ሶስቱ ጊዜ ድረስ።
 
-  ለመጀመር ቦቱን ወደ ቡድናችሁ ጨምሩ፣ ከዚያ /help ተይ.
+  ለመጀመር ቦቱን ወደ ቡድናችሁ ጨምሩ፣ ከዚያ /help ተይ።
+help_text: |
+  <b>ማዋቀር (በቡድን ቻት፣ አድሚን ብቻ)</b>
+  /newequb ስም | መጠን | ድግግሞሽ | [ገንዘብ] | [እንደገና] — እቁብ ይፍጠሩ። ድግግሞሽ፦ weekly፣ biweekly፣ monthly ወይም በየ N ቀኑ (ለምሳሌ <code>3d</code>)። እንደገና፦ <code>once</code> (ነባሪ) ወይም <code>auto</code> — ዙሩ ሲጠናቅ በራሱ አዲስ ዙር ይጀምራል።
+  ምሳሌ፦ <code>/newequb የቤተሰብ እቁብ | 500 | weekly | ETB | auto</code>
+
+  <b>መቀላቀል (በቡድን ቻት)</b>
+  /joinequb — እቁቡን ይቀላቀሉ። ዙሩ ከጀምሮ ንቁ ከሆነ መሃል ላይ ይቀላቀላሉ፦ እስኪሸነፉ ድረስ ከጀምሩ በኋላ ያሉትን ሁሉ ዙሮች መክፈል ይኖርብዎታል። የተሰቀለው መልእክት ላይ 💰 አዋጋ እና ➕ ተቀላቀል ቁልፎች አሉ።
+  /addmember @user | user_id | reply — አድሚን የሚፈልገውን ሰው ይጨምራል (ተመሳሳይ back-pay ህግ)
+  /leaveequb — ዙሩ ከመጀመሩ በፊት ይለቁ
+  /members — አሁን ያሉ አባላትን ይዘርዝሩ
+  /removemember — አድሚን አባል ያስወግዳል
+
+  <b>ዙሩን መምራት (በቡድን ቻት፣ አድሚን)</b>
+  /startcycle — የአባላት መውጫን ይዝጋ፣ ዙር 1 ይክፈት፣ የመጀመሪያውን የሶስት ቀንና ሰዓት አስነብ።
+  /status — ቀጣዩ የሶስት ጊዜ፣ የከፈሉ፣ ያሸነፉ (የወጣ አሸናፊ ብቻ) — የሚወጣው አሸናፊ አይታይም፤ ማንም አያውቀውም።
+  /drawnow — ከከፈሉ አባላት መካከል አሁኑኑ ሶስት ይልቀቁ
+  /postpone ሰዓታት — የቆየ ሶስትን ያራዝሙ (ለምሳሌ /postpone 24)
+  /payout — አሸናፊው ገንዘቡን እንደተቀበለ ያረጋግጡ፤ ቀጣዩን ዙር ይከፍታል
+  /recipient — በዚህ ዙር የተሸነፈው (ወይም ሶስቱ ሲቀርብ)
+  /remind — በዚህ ዙር ያልከፈሉትን በDM ያስታውሱ
+  /history — የዚህ እቁብ ሙሉ የክፍያ ታሪክ
+  /cancelequb — ቡድኑን ይሰርዙ
+  /listequbs — በዚህ ቻት የተካሄዱ ሁሉንም እቁቦች ይዘርዝሩ
+
+  <b>ሶስቶቹ እንዴት እንደሚሰሩ</b>
+  በተቀመጠው የሶስት ጊዜ፣ ቦቱ ከከፈሉ እና ከተረጋገጡ አባላት መካከል በዕጣ አሸናፊውን ይለቀቃል — ክፍያ ያልተረጋገጠላቸው ከዚያ ዙር ሶስት ውጭ ይሆናሉ። ትክክለኛው የሶስት ቀንና ሰዓት ሁልጊዜ አስነብ ይሆናል። እያንዳንዱ ሶስት ማስረጃዊ ነው፦ የseed hash ስሙን ሲከፈት ይታተማል፣ seed በውጤቱ ውስጥ ይገለጻል።
+
+  <b>መዋጮ መክፈል (በግል ቻት፣ ማንም)</b>
+  /contribute — የሚገባዎትን ሁሉ (ዙር በዙር፣ back-payን ጨምሮ) እና እንዴት እንደሚከፍሉ ይመልከቱ
+  ወይም በቡድናችሁ በተሰቀለው መልእክት ላይ ያለውን 💰 አዋጋ ቁልፍ ይጫኑ — ወደዚህ ቻት ይከፍትልዎታል።
+  ከከፈሉ በኋላ የክፍያ ማረጋገጫዎን (ስክሪንሾት ወይም የግብይት ቁጥር) እዚህ ይላኩ — ወደ የመጀመሪያው ያልተከፈለ ዙርዎ በራሱ ይመደባል። ሶስቱ ከመታታቱ በፊት እንዲረጋገጥ በቂ ጊዜ ቀድመው ይላኩ!
+
+  <b>የአድሚን አስተዳደር</b>
+  /addadmin, /deladmin, /listadmins
+  /addpayment, /editpayment, /delpayment, /togglepayment, /listpayments
+
+  /language — የዚህን ቻት ቋንቋ ይቀይሩ
 only_admin_can_change_language: "ቋንቋን መቀየር የሚችለው አድሚን ብቻ ነው።"
 choose_language: "ቋንቋ ይምረጡ፦"
 language_set_confirmation: "✅ ቋንቋ ተቀይሯል።"
 admins_only: "ለአድሚኖች ብቻ።"
-no_open_group: "በዚህ ቻት ውስጥ ገና የተከፈተ እቁብ የለም። አድሚን /newequb በመጠቀም መጀመር ይችላል።"
+group_commands_require_group_chat: "ይህ ትዕዛዝ እቁቡ በሚኖርበት በቡድን ቻት ውስጥ ይሰራል፤ በግል ቻት አይሰራም።"
+no_open_group: "በዚህ ቻት ውስጥ ገና የተከፈተ ወይም ንቁ እቁብ የለም። አድሚን /newequb በመጠቀም መጀመር ይችላል።"
 no_active_group: "በዚህ ቻት ውስጥ አሁን ንቁ የእቁብ ዙር የለም።"
 
-group_created: "✅ «{name}» (እቁብ #{number}) ተፈጥሯል — በአባል በዙር {amount} {currency}። አባላት አሁን /joinequb ማድረግ ይችላሉ።"
+# --- group lifecycle ---
+usage_newequb: |
+  አጠቃቀም፦ <code>/newequb ስም | መጠን | ድግግሞሽ | [ገንዘብ] | [እንደገና]</code>
+  ድግግሞሽ፦ weekly፣ biweekly፣ monthly ወይም በየ N ቀኑ — ለምሳሌ <code>3d</code>፣ <code>14d</code>
+  ገንዘብ (አማራጭ)፦ ከመጠኖች አጠገብ ይታያል (ነባሪ ETB)
+  እንደገና (አማራጭ)፦ <code>once</code> (ነባሪ) ሁሉም ሲያደርሳቸው ያበቃል፤ <code>auto</code> በተመሳሳይ አባላት ወዲያውኑ አዲስ ዙር ይጀምራል።
+  ምሳሌ፦ <code>/newequb የቤተሰብ እቁብ | 500 | weekly | ETB | auto</code>
+group_created: "✅ «{name}» (እቁብ #{number}) ተፈጥሯል — በአባል በዙር {amount} {currency}። አባላት አሁን /joinequb ማድረግ ይችላሉ። ሁሉም ሲገባ አድሚን /startcycle ያሂዳል።"
+group_created_auto: "🔄 ራስ-ሰር እንደገና መጀመር በርቷል፦ እያንዳንዱ አባል ገንዘቡን ሲያደርሱት በኋላ አዲስ ዙር በተመሳሳይ አባላት በራሱ ይጀምራል።"
 joined_group: "🙋 «{name}» ገብተዋል። እስካሁን አባላት: {count}።"
 left_group: "👋 «{name}» ለቀዋል።"
+not_a_member: "እርስዎ የ«{name}» አባል አይደሉም።"
+usage_removemember: "አጠቃቀም፦ /removemember &lt;telegram_id&gt; (ወይም @username፣ ወይም የእሱ መልእክት ላይ reply አድርጉ)"
+member_removed: "አባሉ ከ«{name}» ተወግዷል።"
 members_title: "👥 የ«{name}» አባላት ({count}):"
+members_line: "{index}. {who}{extra}"
+members_line_received: " — ✅ ገንዘቡን ተቀብሏል (ዙር {period})"
+members_line_backpay: " — ⏳ ዙር 1..{period} በመክፈል ላይ"
 group_cancelled: "🚫 «{name}» ተሰርዟል።"
+no_groups_yet: "በዚህ ቻት ገና ምንም እቁብ አልተፈጠረም።"
+groups_list_title: "📋 በዚህ ቻት ያሉ እቁቦች:"
+group_summary_line: "#{number} {name} — {status} — {amount} {currency}/{frequency}"
 
 group_status_open: "ለመቀላቀል ክፍት"
 group_status_active: "ንቁ"
@@ -33,32 +89,153 @@ group_status_cancelled: "ተሰርዟል"
 
 frequency_weekly: "በየሳምንቱ"
 frequency_biweekly: "በየሁለት ሳምንቱ"
-frequency_monthly: "በየወሩ"
-
-status_title: "📊 «{name}» (እቁብ #{number})"
-status_waiting_to_start: "አድሚን /startcycle እስኪያደርግ በመጠበቅ ላይ።"
-payout_paid: "ተከፍሏል ✅"
-payout_pending: "በመጠባበቅ ላይ ⏳"
-
-contribute_in_private: "እባክዎ ለግል መልእክት ይላኩልኝ እና እዚያ /contribute ይጠቀሙ።"
-no_pending_contribution: "አሁን የሚጠበቅብዎት የእቁብ መዋጮ የለም።"
-contribute_send_proof: "ከከፈሉ በኋላ፣ የክፍያ ማረጋገጫ ፎቶ ወይም የግብይት ቁጥር እዚህ ይላኩልኝ።"
-proof_received: "✅ ደረሰኝ ደርሶኛል — ለ«{name}» ማረጋገጫዎ ለአድሚኖች ተልኳል።"
-
-cycle_completed: "🏁 «{name}» ሙሉ ዙሩን አጠናቋል — ሁሉም አባላት ክፍያቸውን ተቀብለዋል። እንኳን ደስ አላችሁ!"
-everyone_contributed: "ሁሉም በዚህ ዙር አዋጥተዋል።"
-
-# --- lottery (ሶስት) ---
+frequency_monthly: "በየ30 ቀኑ"
 frequency_every_n_days: "በየ{n} ቀኑ"
+
+# --- admin-added members / joining buttons ---
+usage_addmember: "አጠቃቀም፦ /addmember @username — ወይም /addmember &lt;telegram_id&gt; — ወይም የእሱ መልእክት ላይ reply አድርገው /addmember ይጻፉ"
+addmember_not_found: "❌ «{token}»ን ማግኘት አልቻልኩም። ቴሌግራም ቦቶች በusername መፈለግ አይፈቅድም — መጀመሪያ በዚህ ቡድን ውስጥ ማንኛውም መልእክት እንዲልኩላቸው ይጠይቁ (እንዲሁ እያስታወስኋቸው ነው)፣ ወይም የቁጥር id ይጠቀሙ፣ ወይም የእሱ መልእክት ላይ reply ይአድርጉ።"
+member_added: "✅ {who} ወደ «{name}» ታክሏል።"
+member_added_midcycle: "✅ {who} ወደ «{name}» ታክሏል — ዙሩ በሂደት ላይ ስለሆነ፣ ሶስት ለማሸነፍ የፊት {periods} ዙሮችን መክፈል አለበት።"
+contribute_button: "💰 አዋጋ"
+join_button: "➕ ተቀላቀል"
+joined_midcycle: "🙋 ወደ «{name}» ገብተዋል ({count} አባላት) — ዙሩ ጀምሯል፤ ስለዚህ ሶስት ለማሸነፍ ከጀምሩ በኋላ ያሉትን ሁሉ {periods} ዙሮች መክፈል አለብዎ። 💰 አዋጋ የሚለውን ቁልፍ ተጠቀም።"
+
+# --- errors ---
+error_invalid_frequency: "ድግግሞሹ weekly፣ biweekly፣ monthly ወይም በየ N ቀኑ መሆን አለበት — ለምሳሌ 3d፣ 7d፣ 30d።"
+error_order_mode_removed: "ይህ እቁብ አሁን እንደ ሶስት ይሰራል — ቋሚ ቅደም ተከተል የለም። የእያንዳንዱ ዙር አሸናፊ በሶስት ጊዜው በዕጣ ይወጣል። የቅደም ተከተል ተለዋጭ ሰርዘው ይቀጥሉ፦ /newequb ስም | መጠን | ድግግሞሽ"
+error_invalid_restart_mode: "የእንደገና መጀመር ሁኔታ 'once' ወይም 'auto' መሆን አለበት።"
+error_invalid_amount: "የመዋጮው መጠን አዎንታዊ ቁጥር መሆን አለበት።"
+error_group_already_exists: "በዚህ ቻት ውስጥ ክፍት ወይም ንቁ እቁብ አለ። እስኪጠናቀቅ ወይም /cancelequb እስኪ ቅደም።"
+error_group_not_open: "ይህ እቁቡ ለመቀላቀል ሲከፈት ወይም ንቁ ሲሆን ብቻ ይሰራል።"
+error_already_member: "ያ ተጠቃሚ ቀድሞውኑ የዚህ ቡድን አባል ነው።"
+error_not_a_member: "ያ ተጠቃሚ የዚህ ቡድን ንቁ አባል አይደለም።"
+error_not_enough_members: "ዙሩን ከመጀመርዎ በፊት ቢያንስ 2 አባላት ያስፈልጋሉ።"
+error_group_already_terminal: "ይህ ቡድን ቀድሞውኑ ተጠናቋል ወይም ተሰርዟል።"
+error_group_not_active: "የዚህ ቡድን ዙር ንቁ አይደለም።"
+error_no_payout_record: "እስካሁን ምንም ለማረጋገጥ አልተጠበቀም — የዚህ ዙር አሸናፊ ገና አልተወጣም። ሶስቱ በተቀመጠው ጊዜ በራሱ ይካሄዳል (የተሰቀለውን መልእክት ይመልከቱ)፣ ወይም አድሚን /drawnow መጠቀም ይችላል።"
+error_already_paid: "የዚህ ዙር ክፍያ ቀድሞውኑ እንደተከፈለ ተመዝግቧል።"
+error_member_already_paid_out: "ያ አባል በዚህ ዙር ገንዘቡን ተቀብሏል — ከመዝገቡ መወገድ አይቻልም።"
+error_member_is_current_winner: "ያ አባል የዚህ ዙር የተወጣ አሸናፊ ሲሆን ገና አልተከፈለም። መጀመሪያ /payout ያሂዱ፤ ከዚያ ያስወግዱ።"
+error_no_eligible_members: "በዚህ ዙር እስካሁን የተረጋገጠ ክፍያ የለም፤ ስለዚህ መካከል የሚሶስት ማንም የለም። ማረጋገጫዎችን በ/pending ያረጋግጡ፣ ወይም ሶስቱን /postpone ያድርጉ።"
+error_nothing_to_draw: "አሁን ቆይቶ የሚሶስት ሶስት የለም — የዚህ ዙር አሸናፊ ምናልባት ቀድሞውኑ ወጥቷል (በ/status ይመልከቱ)።"
+error_join_cycle_ending: "ይህ ዙር በመጨረሻ ክፍያ ላይ ነው — ለመቀላቀል ቀጣዩ ዙር የለም። አድሚን በ/newequb አዲስ እቁብ እንዲጀምር ይጠይቁ።"
+
+# --- starting the cycle / rounds ---
+cycle_started_title: "🎲 <b>«{name}» ተጀምሯል!</b> (ዙር {cycle})"
+cycle_started_rules: "በየዙሩ፣ እያንዳንዱ አባል {amount} {currency} ያዋጣል። የዚህ ዙር ገንዘብ <b>{pool} {currency}</b> ሲሆን ለአንድ በዕጣ የሚወጣ አባል ይሸልማል።"
 cycle_first_draw: "⏰ የመጀመሪያ ሶስት: <b>{when}</b> ({countdown})"
-next_round_draw: "⏰ ሶስት: <b>{when}</b> ({countdown})"
+cycle_pay_instructions: "💰 ሶስቱ ውስጥ እንዲገቡ ከሶስቱ በፊት ይክፈሉ፦ የክፍያ ማረጋገጫዎን በግል ቻት ይላኩ (/contribute)። ክፍያዎ ከሶስቱ በፊት ካልተረጋገጠ ከዚህ ዙር ሶስት ውጭ ይሆናሉ።"
+seed_commit_line: "🔒 የፍትሐዊነት ቃል ኪዳን — seed hash: <code>{hash}</code>"
 cycle_secret_note: "🤫 አሸናፊው በሶስት ጊዜው በዕጣ ይወጣል — እስከዚያው ድረስ ማንም አያውቀውም፣ አድሚኖችም እንኳ።"
+next_round_title: "▶️ <b>ዙር {period} የ«{name}» ተከፈቷል።</b>"
+next_round_amount: "ሁሉም አባላት {amount} {currency} ያዋጣሉ — ሶስቱ ውስጥ እንዲገቡ ከሶስቱ በፊት ይክፈሉ።"
+next_round_draw: "⏰ ሶስት: <b>{when}</b> ({countdown})"
+cycle_new_cycle_line: "🔄 <b>«{name}» አዲስ ዙር #{cycle} በመጀመር ላይ!</b> ተመሳሳይ አባላት፣ አዳዲስ ሶስቶች — ያሸነፉ አባላትም እንደገና ይጫወታሉ።"
+
+# --- status board ---
+status_title: "📊 «{name}» (እቁብ #{number})"
+status_state: "ሁኔታ: {status}"
+status_amount: "መዋጮ: በአባል በዙር {amount} {currency}"
+status_frequency: "ድግግሞሽ: {frequency}"
+status_members_open: "በተቀላቀሉ አባላት: {count}"
+status_waiting_to_start: "አድሚን /startcycle እስኪያደርግ በመጠበቅ ላይ።"
+status_pool: "🪙 በየዙሩ ገንዘብ: {amount} {currency} ({count} አባላት)"
+status_round: "ዙር {period} — ከ{total} አባላት {received} ገንዘቡን ተቀብለዋል"
 status_next_draw: "⏰ ቀጣዩ ሶስት: <b>{when}</b> ({countdown})"
 status_draw_overdue: "⚠️ የሶስት ጊዜው አልፎታል ግን እስካሁን የተረጋገጠ ክፍያ የለም። አድሚን /drawnow ወይም /postpone 24 መጠቀም ይችላል።"
 status_secret_note: "🤫 አሸናፊው በሶስት ጊዜው በዕጣ ይወጣል — እስከዚያው ድረስ ማንም አያውቀውም፣ አድሚኖችም እንኳ።"
+status_contributions_header: "የዚህ ዙር መዋጮዎች (🟢 የተረጋገጠ = በሶስቱ ውስጥ):"
+status_backpay_note: " — ⏳ የፊት ዙሮችን በመክፈል ላይ (እስኪከፍል ድረስ አይሸነፍም)"
+status_received_header: "🏆 ገንዘብ የወሰዱ አባላት ስለሆኑ:"
+status_received_line: "ዙር {period}: {who}"
+status_period: "ዙር {period} ከ{total}"
+status_recipient: "የዚህ ዙር ተቀባይ: {who} — {amount} {currency}"
+status_payout_state: "የክፍያ ሁኔታ: {state}"
+status_completed_msg: "🎉 ይህ እቁብ ተጠናቋል — {total} ዙሮች ተሶስተዋል፣ ሁሉም አባላት ገንዘባቸውን ወስደዋል።"
+payout_paid: "ተከፍሏል ✅"
+payout_pending: "በመጠባበቅ ላይ ⏳"
+
+# --- draws ---
 draw_result_title: "🎉 <b>ሶስት ተጠናቋል</b> — «{name}»፣ ዙር {period}"
 draw_result_winner: "🎊 {who} <b>{amount} {currency}</b> አሸንፏል!"
+draw_result_eligible_count: "ከሶስቱ በፊት ክፍያቸው የተረጋገጠላቸው {count} አባላት መካከል ተወጥቷል።"
+payout_admin_note: "👩‍💼 አድሚን፦ አሸናፊው ገንዘቡን በእውነት እንደወሰደ በ/payout ያረጋግጡ — ቀጣዩን ዙር ይከፍታል።"
+draw_verification: "🔍 <b>በራስዎ ያረጋግጡ፦</b> seed <code>{seed}</code> (sha256 = ዙሩ ሲከፈት የታተመው hash <code>{hash}</code>)። አሸናፊ = sorted([{ids}]) በRandom(seed) የተመረጠ።"
 draw_overdue_group: "⏰ የ«{name}» (ዙር {period}) የሶስት ጊዜ አልፎታል፣ ግን የተረጋገጠ ክፍያ የለም። ክፍያዎች ከተረጋገጡ በኋላ አድሚን /drawnow ወይም /postpone 24 ይጠቀም።"
-dm_you_won: "🎉 እንኳን ደስ አለዎት! የ«{name}» ዙር {period} ሶስት አሸነፉ፦ <b>{amount} {currency}</b>!"
-dm_contribution_verified: "✅ የ«{name}» (ዙር {period}፣ {amount} {currency}) መዋጮዎ ጸድቋል — በዚህ ዙር ሶስት ውስጥ አሉ።"
+draw_overdue_admin_dm: "⏰ «{name}» (ዙር {period})፦ የሶስት ጊዜው አልፏል፣ ክፍያም የለም። ማረጋገጫዎችን በ/pending ያረጋግጡ ከዚያ /drawnow — ወይም በቡድኑ ውስጥ /postpone 24።"
+overdue_eligible_admin_dm: "🔔 «{name}» (ዙር {period})፦ {count} አባል(ዎች) ከጊዜው በኋላ ክፍያቸው ተረጋግጧል። ለመስራት /drawnow፣ ወይም ሌሎች ጊዜ እንዲኖራቸው /postpone 24 በቡድኑ ይጠቀሙ።"
+pre_draw_review_reminder: "⏰ ማሳሰቢያ: «{name}» (ዙር {period}) ሶስቱ {when} ላይ ነው፤ {count} የክፍያ ማረጋገጫ(ዎች) ገና በግምገማ ላይ ናቸው። ያልተረጋገጡ አባላት ከሶስቱ ውጭ ይሆናሉ — በቡድኑ /pending ይጠቀሙ።"
+dm_you_won: "🎉 እንኳን ደስ አለዎት! የ«{name}» ዙር {period} ሶስት አሸነፉ፦ <b>{amount} {currency}</b>! ቡድኑ ላይ ተገልጿል — አድሚኑ ገንዘብዎን ያስረክብዎታል።"
+dm_cycle_started: "🚀 «{group_name}» ተጀምሯል! የመጀመሪያ መዋጮዎ {amount} {currency} አሁን ይገባል። ማረጋገጫዎን እዚህ ይላኩ፣ ወይም ለዝርዝር /contribute ይጠቀሙ።\n⏰ የመጀመሪያ ሶስት: {when} — ከሶስቱ በፊት ይክፈሉና ያስረጋግጡ!"
+pin_permission_missing: "⚠️ መልእክቱን ማስነብ አልቻልኩም — የሶስት ጊዜው በዘላቂ እንዲታይ በዚህ ቡድን \"Pin Messages\" የአድሚን መብት እንዲሰጠኝ ይድገፉ።"
+
+# --- recipient / payout ---
+recipient_winner_info: "🎯 የዙር {period} አሸናፊ: {who} — {amount} {currency} ({state})"
 recipient_pending_info: "⏳ የዚህ ዙር አሸናፊ ገና አልተወጣም።\n⏰ ሶስት: {when} ({countdown})\n🤫 እስከዚያው ድረስ ማንም አያውቀውም።"
+payout_announcement: "🎊 «{name}» — የዙር {period} {amount} {currency} ለ{who} ተላለፈ!"
+dm_payout_received: "🎉 የ«{name}» እቁብ ክፍያዎ ደርሷል፦ {amount} {currency}። እባክዎ ከአድሚኑ ጋር ያረጋግጡ።"
+cycle_completed: "🏁 «{name}» ሙሉ ዙሩን አጠናቋል — ሁሉም አባላት ገንዘባቸውን ተቀብለዋል። እንኳን ደስ አላችሁ! አድሚን አዲስ በ/newequb መጀመር ይችላል (ምክር፦ ቀጥሎ ጊዜ auto ተለዋጭ ይጠቀሙ)።"
+period_advanced: "▶️ አሁን በዙር {period} ከ{total} ውስጥ።"
+dm_new_period: "📆 «{name}» — ዙር {period} ተከፍቷል። መዋጮዎ {amount} {currency} ይገባል። ማረጋገጫዎን እዚህ ይላኩ፣ ወይም /contribute ይጠቀሙ።\n⏰ ሶስት: {when} — ከሶስቱ በፊት ያረጋግጡ!"
+dm_new_cycle: "🔄 «{name}» አዲስ ዙር (#{cycle}) ጀምሯል! የዙር 1 መዋጮዎ {amount} {currency} ይገባል። ማረጋገጫዎን እዚህ ይላኩ፣ ወይም /contribute ይጠቀሙ።\n⏰ የመጀመሪያ ሶስት: {when} — ከሶስቱ በፊት ያረጋግጡ!"
+usage_postpone: "አጠቃቀም፦ /postpone <ሰዓታት> — ለምሳሌ /postpone 24 (ነባሪ {default})።"
+draw_postponed: "⏩ ሶስቱ ተራዝሟል። አዲሱ የሶስት ጊዜ: <b>{when}</b> ({countdown})።"
+everyone_contributed: "ሁሉም በዚህ ዙር አዋጥተዋል።"
+dm_reminder: "⏰ ማሳስበር፦ የ«{name}» (ዙር {period}) መዋጮዎ {amount} {currency} ገና ቀርቷል። ማረጋገጫዎን እዚህ ይላኩ — ያልተረጋገጡ ክፍያዎች ከሶስቱ ውጭ ይሆናሉ።"
+reminders_sent: "ለ{count} አባል(ዎች) ማሳሰቢያ ተልኳል።"
+no_payout_history: "ለዚህ ቡድን ገና የተመዘገበ ክፍያ የለም።"
+history_title: "📜 የክፍያ ታሪክ — «{name}»"
+history_line: "ዙር {period}: {who} — {amount} {currency} ({state})"
+
+# --- contributing ---
+contribute_in_private: "እባክዎ መዋጮዎን ለማቅረብ በግል ይላኩልኝ — ከታች ያለውን ቁልፍ ይጫኑ፤ ቻታችንን እከፍታለሁ።"
+no_pending_contribution: "አሁን የሚጠበቅብዎት የእቁብ መዋጮ የለም።"
+contribution_already_submitted: "የ«{name}» ማረጋገጫዎ ቀድሞውኑ ተልኳል፤ የአድሚን ግምገማ በመጠበቅ ላይ ነው።"
+contribute_header: "💰 {count} ያልተከፈሉ መዋጮ(ዎች) አሉዎት:"
+contribute_pending_line: "• «{name}» — ዙር {period}: {amount} {currency} ({state}) — ሶስት: {when}"
+state_to_pay: "አሁን ይክፈሉ 💰"
+state_awaiting_review: "ለግምገማ በመጠበቅ ላይ ⏳"
+payment_methods_header: "የክፍያ መንገዶች:"
+contribute_send_proof: "ከከፈሉ በኋላ ስክሪንሾቱን ወይም የግብይቱን ቁጥር እዚህ ይላኩ — ወደ መጀመሪያው ያልተከፈለ ዙርዎ በራሱ ይመደባል።"
+proof_received: "✅ ደረሰኝ ደርሶኛል — የ«{name}» ማረጋገጫዎ ለአድሚኖች ተልኳል።"
+proof_received_with_remaining: "✅ ደረሰኝ ደርሶኛል — የ«{name}» ማረጋገጫዎ ለአድሚኖች ተልኳል። {remaining} ዙር(ዎች) ገና ለመክፈል ቀሪ ናቸው።"
+no_pending_reviews: "ለግምገማ የሚጠበቅ መዋጮ የለም።"
+pending_review_line: "{who}\nዙር {period} — {amount} {currency}"
+pending_review_proof_text: "ማረጋገጫ: {proof}"
+review_result_verified: "✅ ጸድቋል"
+review_result_rejected: "❌ ውድቅ ተደርጓል"
+dm_contribution_verified: "✅ የ«{name}» (ዙር {period}፣ {amount} {currency}) መዋጮዎ ጸድቋል — በዚህ ዙር ሶስት ውስጥ አሉ።"
+dm_contribution_rejected: "❌ የ«{name}» (ዙር {period}፣ {amount} {currency}) የክፍያ ማረጋገጫዎ ውድቅ ተደርጓል። ከአድሚኑ ጋር ይወያዩና በ/contribute ደግመው ይላኩ።"
+
+# --- admin management ---
+usage_addadmin: "አጠቃቀም፦ /addadmin &lt;telegram_id&gt;"
+admin_added: "✅ {admin_id} አድሚን ሆኗል።"
+usage_deladmin: "አጠቃቀም፦ /deladmin &lt;telegram_id&gt;"
+admin_removed: "✅ {admin_id} አድሚንነቱ ተወግዷል።"
+admins_list_header: |
+  የአሁኑ አድሚኖች፦
+  {list}
+usage_chat: "አጠቃቀም፦ /chat &lt;telegram_id&gt; <ጽሑፍ>  (ወይም መልእክት ላይ reply አድርገው /chat &lt;telegram_id&gt;)"
+chat_sent: "✅ መልእክቱ ተልኳል።"
+chat_send_failed: "❌ መልእክቱን መላክ አልቻልኩም — ተጠቃሚው ከእኔ ጋር ቻት አልጀመረም ሊሆን ይችላል።"
+chat_need_reply_or_text: "መልእክት ላይ reply ያድርጉ፣ ወይም ጽሑፍ ይስጡ፦ /chat &lt;telegram_id&gt; <ጽሑፍ>"
+chat_forwarded: "✅ መልእክቱ ተመልጥሏል።"
+chat_forward_failed: "❌ መልእክቱን ማመላለስ አልቻልኩም።"
+
+# --- payment methods ---
+usage_addpayment: "አጠቃቀም፦ /addpayment ስም | ዝርዝር\nምሳሌ: /addpayment Telebirr | 09xxxxxxxx"
+payment_added: "✅ የክፍያ መንገድ ታክሏል (id {payment_id}): {name}"
+usage_editpayment: "አጠቃቀም፦ /editpayment &lt;id&gt; | ስም | ዝርዝር"
+payment_not_found: "የክፍያ መንገድ አልተገኘም።"
+payment_updated: "✅ የክፍያ መንገድ ተስተካክሏል: {name}"
+usage_delpayment: "አጠቃቀም፦ /delpayment &lt;id&gt;"
+payment_removed: "✅ የክፍያ መንገድ ተወግዷል።"
+usage_togglepayment: "አጠቃቀም፦ /togglepayment &lt;id&gt;"
+state_active: "ንቁ"
+state_inactive: "ቦዝኗል"
+payment_toggled: "✅ {name} አሁን {state} ነው።"
+payment_list_empty: "ገና የክፍያ መንገድ አልተቀመጠም። በ/addpayment ይጨምሩ።"
+payment_list_header: "💳 የክፍያ መንገዶች:"
+payment_list_line: "[{payment_id}] {name}: {details} ({state})"
+

@@ -86,37 +86,81 @@ async def create_group(chat_id: int, name: str, amount: int, currency: str, freq
 
 
 async def join_group(group: dict, member: dict) -> dict:
-    if group["status"] != "open":
+    """Self-join. Open groups: they're in immediately. Active cycles: they
+    join mid-cycle and must back-pay every round since the cycle started
+    before they can win one (see _add_member_to_cycle)."""
+    if group["status"] not in ("open", "active"):
         raise EqubError("group_not_open")
-    if await repo.get_member(group["_id"], member["telegram_id"]):
+    existing = await repo.get_member(group["_id"], member["telegram_id"])
+    if existing and existing["status"] == "active":
         raise EqubError("already_member")
-    return await repo.add_member(group["_id"], member["telegram_id"], member.get("username"), member.get("display_name"))
+    if group["status"] == "open":
+        new_doc = await repo.add_member(group["_id"], member["telegram_id"], member.get("username"), member.get("display_name"))
+        return {"member": new_doc, "backpay_periods": []}
+    return await _add_member_to_cycle(group, member)
 
 
 async def admin_add_member(group: dict, member: dict) -> dict:
-    """Admin adds a specific person. Works while the group is open (they
-    join immediately) or active (they participate from the NEXT round —
-    the current round's contributions and draw already exist)."""
+    """Admin adds a specific person — same rules as self-join: immediate on
+    an open group, back-pay mid-cycle join on an active one."""
     if group["status"] not in ("open", "active"):
         raise EqubError("group_not_open")
+    if group["status"] == "open":
+        existing = await repo.get_member(group["_id"], member["telegram_id"])
+        if existing and existing["status"] == "active":
+            raise EqubError("already_member")
+        if existing:  # previously removed — reactivate
+            await repo.reactivate_member(group["_id"], member["telegram_id"], None)
+            new_doc = await repo.get_member(group["_id"], member["telegram_id"])
+        else:
+            new_doc = await repo.add_member(
+                group["_id"], member["telegram_id"], member.get("username"), member.get("display_name")
+            )
+        return {"member": new_doc, "backpay_periods": []}
+    return await _add_member_to_cycle(group, member)
+
+
+async def _add_member_to_cycle(group: dict, member: dict) -> dict:
+    """Add someone to an ALREADY-RUNNING cycle. They contribute every round
+    from now on, and — to keep the lottery fair — must back-pay every round
+    the cycle has already run before they're eligible for any draw. Without
+    this, someone could join after everyone else had received their pool
+    and win a full pool having paid only one contribution."""
+    # A 'once' cycle whose current round is already drawn has no future
+    # round left for a joiner — they'd back-pay into a cycle that's about
+    # to complete. Auto-restart groups are fine: a fresh cycle follows.
+    if group.get("draw_state") == "drawn" and group.get("restart_mode") != "auto":
+        raise EqubError("join_cycle_ending")
 
     telegram_id = member["telegram_id"]
     existing = await repo.get_member(group["_id"], telegram_id)
     if existing and existing["status"] == "active":
         raise EqubError("already_member")
 
+    joined_period = group["current_period"]
     if existing:  # previously removed — reactivate
-        joined_period = group["current_period"] if group["status"] == "active" else None
         await repo.reactivate_member(group["_id"], telegram_id, joined_period)
         new_doc = await repo.get_member(group["_id"], telegram_id)
     else:
-        joined_period = group["current_period"] if group["status"] == "active" else None
         new_doc = await repo.add_member(
             group["_id"], telegram_id, member.get("username"), member.get("display_name"),
             joined_period=joined_period,
         )
 
-    return {"member": new_doc, "next_round": group["status"] == "active"}
+    # Back-pay: pending contributions for rounds 1..joined_period of this
+    # cycle. (Round docs for settled rounds were only created for members
+    # who were in the group at the time, so the joiner gets fresh ones —
+    # skipping rounds they already have a doc for, e.g. after a re-join.)
+    cycle = group.get("cycle_number", 1)
+    backpay_periods = []
+    for period in range(1, joined_period + 1):
+        already = await repo.get_contribution(group["_id"], period, telegram_id, cycle_number=cycle)
+        if already:
+            continue
+        await repo.create_contribution(group["_id"], cycle, period, member, group["contribution_amount"])
+        backpay_periods.append(period)
+
+    return {"member": new_doc, "backpay_periods": backpay_periods}
 
 
 async def leave_or_remove_member(group: dict, telegram_id: int) -> None:

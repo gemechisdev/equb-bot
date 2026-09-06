@@ -49,14 +49,26 @@ def pick_winner(seed: str, eligible_ids: list[int]) -> int:
 
 async def compute_eligible_ids(group: dict, period: int) -> list[int]:
     """Active members who verified their payment this round (in this cycle)
-    and haven't received their pool yet — the only people in the draw."""
+    and haven't received their pool yet — the only people in the draw.
+
+    Mid-cycle joiners (joined_period set for this cycle) additionally need
+    EVERY contribution since the cycle started verified — their back-pay
+    must be complete, otherwise someone could join after everyone else had
+    received their pool and win a full pool having paid once."""
     members = await repo.list_members(group["_id"], active_only=True)
     verified = set(await repo.get_verified_member_ids(group["_id"], period, group.get("cycle_number")))
-    return sorted(
-        m["telegram_id"]
-        for m in members
-        if not m.get("received_payout") and m["telegram_id"] in verified
-    )
+    cycle = group.get("cycle_number", 1)
+
+    eligible = []
+    for m in members:
+        if m.get("received_payout") or m["telegram_id"] not in verified:
+            continue
+        if m.get("joined_period") and await repo.member_has_unverified_contributions(
+            group["_id"], cycle, m["telegram_id"]
+        ):
+            continue
+        eligible.append(m["telegram_id"])
+    return sorted(eligible)
 
 
 async def run_draw(bot, group: dict) -> dict:

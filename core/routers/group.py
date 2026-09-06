@@ -1,8 +1,9 @@
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from core.i18n import t
+from core.keyboards import build_participation_kb
 from core.pinning import announce_and_pin
 from core.texts import (
     build_cycle_started_text,
@@ -119,6 +120,14 @@ async def cmd_newequb(message: Message):
     await message.answer(text)
 
 
+async def _join_confirmation(group: dict, identity: dict, lang: str) -> str:
+    result = await equb_service.join_group(group, identity)
+    count = await repo.count_active_members(group["_id"])
+    if result["backpay_periods"]:
+        return t(lang, "joined_midcycle", name=group["name"], count=count, periods=len(result["backpay_periods"]))
+    return t(lang, "joined_group", name=group["name"], count=count)
+
+
 @router.message(Command("joinequb", "join"))
 async def cmd_joinequb(message: Message):
     lang = await repo.get_chat_language(message.chat.id)
@@ -136,13 +145,43 @@ async def cmd_joinequb(message: Message):
     )
 
     try:
-        await equb_service.join_group(group, identity)
+        text = await _join_confirmation(group, identity, lang)
     except EqubError as e:
         await message.answer(_error_text(lang, e))
         return
 
-    count = await repo.count_active_members(group["_id"])
-    await message.answer(t(lang, "joined_group", name=group["name"], count=count))
+    kb = await build_participation_kb(message.bot, lang)
+    await message.answer(text, reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("joinequb:"))
+async def cb_joinequb(callback: CallbackQuery):
+    """The ➕ Join button under the pinned round announcement — same rules
+    as /joinequb, no command needed."""
+    chat_id = callback.message.chat.id if callback.message else callback.from_user.id
+    lang = await repo.get_chat_language(chat_id)
+
+    group = await repo.get_group(callback.data.split(":", 1)[1])
+    if not group or group["status"] not in ("open", "active"):
+        await callback.answer(t(lang, "no_open_group"), show_alert=True)
+        return
+
+    identity = await resolve_user_identity(
+        callback.bot, chat_id, telegram_id=callback.from_user.id,
+        username=callback.from_user.username, display_name=callback.from_user.full_name,
+    )
+
+    try:
+        text = await _join_confirmation(group, identity, lang)
+    except EqubError as e:
+        await callback.answer(_error_text(lang, e), show_alert=True)
+        return
+
+    await callback.answer()
+    try:
+        await callback.message.answer(text)
+    except Exception:
+        pass
 
 
 @router.message(Command("addmember", "am"))
@@ -172,8 +211,11 @@ async def cmd_addmember(message: Message):
         return
 
     who = format_user_identity(target.get("display_name"), target.get("username"), target["telegram_id"])
-    key = "member_added_next_round" if result["next_round"] else "member_added"
-    await message.answer(t(lang, key, who=who, name=group["name"]))
+    if result["backpay_periods"]:
+        await message.answer(t(lang, "member_added_midcycle", who=who, name=group["name"],
+                               periods=len(result["backpay_periods"])))
+    else:
+        await message.answer(t(lang, "member_added", who=who, name=group["name"]))
 
 
 @router.message(Command("leaveequb", "leave"))
@@ -254,7 +296,8 @@ async def cmd_startcycle(message: Message):
 
     group = await repo.get_group(group["_id"])
     text = build_cycle_started_text(group, len(result["members"]), lang, result["seed_hash"], result["draw_at"])
-    await announce_and_pin(message.bot, message.chat.id, group["_id"], text)
+    kb = await build_participation_kb(message.bot, lang, group_id=group["_id"])
+    await announce_and_pin(message.bot, message.chat.id, group["_id"], text, reply_markup=kb)
 
     payment_methods = await repo.list_payment_methods(active_only=True)
     footer = ""

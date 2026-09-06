@@ -22,7 +22,7 @@ from db import repository as repo
 logger = logging.getLogger("digital-equb.pinning")
 
 
-async def announce_and_pin(bot, chat_id: int, group_id, text: str, *, pin: bool = True):
+async def announce_and_pin(bot, chat_id: int, group_id, text: str, *, pin: bool = True, reply_markup=None):
     """Send `text` to the chat and pin it, unpinning the previously tracked
     pin for this group. Returns the sent Message (or None if sending failed)."""
     lang = await repo.get_chat_language(chat_id)
@@ -38,7 +38,7 @@ async def announce_and_pin(bot, chat_id: int, group_id, text: str, *, pin: bool 
             logger.warning("Unexpected unpin failure in chat %s: %s", chat_id, e)
 
     try:
-        msg = await bot.send_message(chat_id, text)
+        msg = await bot.send_message(chat_id, text, reply_markup=reply_markup)
     except Exception as e:
         logger.error("Could not send announcement to chat %s: %s", chat_id, e)
         return None

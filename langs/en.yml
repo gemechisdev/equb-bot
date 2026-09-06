@@ -1,0 +1,231 @@
+# All user-facing strings for the Digital Equb bot. {placeholders} are
+# filled in by core/i18n.py's t(). Missing keys in am.yml/om.yml fall back
+# to this file automatically, so partial translations are safe.
+
+language_name_en: "English"
+language_name_am: "አማርኛ"
+language_name_om: "Afaan Oromoo"
+
+# --- common ---
+start_welcome: |
+  👋 Welcome to the Digital Equb bot!
+
+  An Equb (እቁብ) is a rotating savings group: everyone contributes the same amount each round, and ONE member wins the whole pool in a random draw — until everyone has had a turn.
+
+  Nobody — not even the admins — knows who wins a round until the draw happens at its scheduled time.
+
+  Add me to a group to get started, then run /help there to see every command.
+help_text: |
+  <b>Setting up (group chat, admin only)</b>
+  /newequb Name | amount | frequency | [currency] | [restart] — create an Equb. frequency: weekly, biweekly, monthly, or every N days (e.g. <code>3d</code>). restart: <code>once</code> (default) or <code>auto</code> to start a fresh cycle automatically when one completes.
+  Example: <code>/newequb Family Equb | 500 | weekly | ETB | auto</code>
+
+  <b>Joining (group chat)</b>
+  /joinequb — join the open Equb yourself
+  /addmember @user | user_id | reply — admin adds a specific person
+  /leaveequb — leave before the cycle starts
+  /members — list current members
+  /removemember — admin removes a member
+
+  <b>Running the cycle (group chat, admin)</b>
+  /startcycle — lock membership, open round 1, schedule the first draw
+  /status — next draw time, who has paid, who already won (never the future winner — nobody knows it)
+  /drawnow — draw the winner right now among members who have paid
+  /postpone hours — move a pending draw (e.g. /postpone 24)
+  /payout — confirm the winner received the pool; opens the next round
+  /recipient — this round's drawn winner (or when the draw is coming)
+  /remind — DM everyone who hasn't paid yet this round
+  /history — full payout history for this group
+  /cancelequb — cancel the group
+  /listequbs — list every Equb group ever run in this chat
+
+  <b>How draws work</b>
+  At the scheduled draw time I randomly draw the winner among members whose payment was VERIFIED before the draw — unpaid members are excluded from that round. The exact draw date &amp; time is always pinned here. Each draw is provably fair: the seed hash is published when the round opens, the seed is revealed in the result.
+
+  <b>Contributing (private chat with me, anyone)</b>
+  /contribute — see what you owe this round and how to pay
+  Then just send me your payment proof (a screenshot or a text with your transaction ID) — I'll match it automatically. Make sure you send it early enough for an admin to VERIFY it before the draw!
+
+  <b>Admin management</b>
+  /addadmin, /deladmin, /listadmins
+  /addpayment, /editpayment, /delpayment, /togglepayment, /listpayments
+
+  /language — change this chat's language
+only_admin_can_change_language: "Only an admin can change the language in a group chat."
+choose_language: "Choose a language:"
+language_set_confirmation: "✅ Language updated."
+admins_only: "Admins only."
+group_commands_require_group_chat: "This command works in a group chat where the Equb lives, not in a private chat."
+no_open_group: "There's no open or active Equb group in this chat yet. An admin can start one with /newequb."
+no_active_group: "There's no active Equb cycle in this chat right now."
+
+# --- group lifecycle ---
+usage_newequb: |
+  Usage: <code>/newequb Name | amount | frequency | [currency] | [restart]</code>
+  frequency: weekly, biweekly, monthly, or every N days — e.g. <code>3d</code>, <code>14d</code>
+  currency (optional): shown next to amounts (default ETB)
+  restart (optional): <code>once</code> (default) ends after everyone received the pool; <code>auto</code> starts a fresh cycle with the same members right away.
+  Example: <code>/newequb Family Equb | 500 | weekly | ETB | auto</code>
+group_created: "✅ \"{name}\" (Equb #{number}) created — {amount} {currency} per member per round. Members can now /joinequb. When everyone's in, an admin runs /startcycle."
+group_created_auto: "🔄 Auto-restart is ON: when every member has received the pool, a fresh cycle starts automatically with the same members."
+joined_group: "🙋 You've joined \"{name}\". Members so far: {count}."
+left_group: "👋 You've left \"{name}\"."
+not_a_member: "You're not a member of \"{name}\"."
+usage_removemember: "Usage: /removemember <telegram_id> (or @username, or reply to one of their messages)"
+member_removed: "Member removed from \"{name}\"."
+members_title: "👥 Members of \"{name}\" ({count}):"
+members_line: "{index}. {who}{extra}"
+members_line_received: " — ✅ received the pool (round {period})"
+members_line_next_round: " — 🕐 joins from the next round"
+group_cancelled: "🚫 \"{name}\" has been cancelled."
+no_groups_yet: "No Equb groups have been created in this chat yet."
+groups_list_title: "📋 Equb groups in this chat:"
+group_summary_line: "#{number} {name} — {status} — {amount} {currency}/{frequency}"
+
+group_status_open: "open for joining"
+group_status_active: "active"
+group_status_completed: "completed"
+group_status_cancelled: "cancelled"
+
+frequency_weekly: "weekly"
+frequency_biweekly: "bi-weekly"
+frequency_monthly: "every 30 days"
+frequency_every_n_days: "every {n} days"
+
+# --- admin-added members ---
+usage_addmember: "Usage: /addmember @username — or /addmember <telegram_id> — or reply to one of their messages with /addmember"
+addmember_not_found: "❌ I can't resolve \"{token}\". Telegram doesn't let bots look users up by username — ask them to send any message in this group first (so I can remember them), or use their numeric id, or reply to one of their messages."
+member_added: "✅ Added {who} to \"{name}\"."
+member_added_next_round: "✅ Added {who} to \"{name}\" — the round already has its contribution list, so they'll join from the NEXT round."
+
+# --- errors (services/equb_service.py EqubError codes) ---
+error_invalid_frequency: "Frequency must be weekly, biweekly, monthly, or every N days — e.g. 3d, 7d, 30d."
+error_order_mode_removed: "This Equb now runs as a lottery — there's no fixed order anymore. Every round's winner is drawn at random at the draw time. Just drop the order parameter: /newequb Name | amount | frequency"
+error_invalid_restart_mode: "Restart mode must be 'once' or 'auto'."
+error_invalid_amount: "The contribution amount must be a positive number."
+error_group_already_exists: "There's already an open or active Equb group in this chat. Finish or /cancelequb it first."
+error_group_not_open: "This only works while the group is still open for joining (before /startcycle)."
+error_already_member: "That user is already a member of this group."
+error_not_a_member: "That user isn't an active member of this group."
+error_not_enough_members: "You need at least 2 members before starting the cycle."
+error_group_already_terminal: "This group is already completed or cancelled."
+error_group_not_active: "This group's cycle isn't active."
+error_no_payout_record: "Nothing to mark yet — this round's winner hasn't been drawn. The draw happens automatically at the scheduled time (see the pinned message), or an admin can /drawnow early."
+error_already_paid: "This round's payout has already been marked as paid."
+error_member_already_paid_out: "That member already received their pool this cycle — they can't be removed from the ledger."
+error_member_is_current_winner: "That member is this round's drawn winner and hasn't been paid yet. Run /payout first, then remove them."
+error_no_eligible_members: "Nobody has a VERIFIED payment for this round yet, so there's no one to draw among. Verify proofs with /pending, or /postpone the draw."
+error_nothing_to_draw: "There's no pending draw right now — this round's winner may already be drawn (see /status)."
+
+# --- starting the cycle / rounds ---
+cycle_started_title: "🎲 <b>\"{name}\" has started!</b> (cycle {cycle})"
+cycle_started_rules: "Every round, each member contributes {amount} {currency}. This round's pool is <b>{pool} {currency}</b> — and ONE member wins it in a random draw."
+cycle_first_draw: "⏰ First draw: <b>{when}</b> ({countdown})"
+cycle_pay_instructions: "💰 Pay before the draw to be included: send me your payment proof in a private chat (/contribute). If your payment isn't verified before the draw, you're excluded from this round's draw."
+seed_commit_line: "🔒 Fairness commitment — seed hash: <code>{hash}</code>"
+cycle_secret_note: "🤫 The winner is drawn at random at the draw time — nobody knows it before, not even the admins."
+next_round_title: "▶️ <b>Round {period} of \"{name}\" is open.</b>"
+next_round_amount: "Everyone contributes {amount} {currency} — pay before the draw to be in it."
+next_round_draw: "⏰ Draw: <b>{when}</b> ({countdown})"
+cycle_new_cycle_line: "🔄 <b>New cycle #{cycle} of \"{name}\" is starting!</b> Same members, fresh draws — everyone who received a pool last cycle is playing again."
+
+# --- status board ---
+status_title: "📊 \"{name}\" (Equb #{number})"
+status_state: "Status: {status}"
+status_amount: "Contribution: {amount} {currency} per member per round"
+status_frequency: "Frequency: {frequency}"
+status_members_open: "Members joined so far: {count}"
+status_waiting_to_start: "Waiting for an admin to run /startcycle."
+status_pool: "🪙 Pool each round: {amount} {currency} ({count} members)"
+status_round: "Round {period} — {received} of {total} members have received their pool so far"
+status_next_draw: "⏰ Next draw: <b>{when}</b> ({countdown})"
+status_draw_overdue: "⚠️ The draw time has passed but nobody has a verified payment yet. An admin can /drawnow once payments are verified, or /postpone 24 to move the draw."
+status_secret_note: "🤫 The winner is drawn at random at the draw time — nobody knows it before, not even the admins."
+status_contributions_header: "Contributions this round (🟢 verified = in the draw):"
+status_received_header: "🏆 Pools received so far:"
+status_received_line: "Round {period}: {who}"
+status_period: "Period {period} of {total}"
+status_recipient: "This period's recipient: {who} — {amount} {currency}"
+status_payout_state: "Payout status: {state}"
+status_completed_msg: "🎉 This Equb is complete — {total} rounds drawn, everyone has received their pool."
+payout_paid: "paid ✅"
+payout_pending: "pending ⏳"
+
+# --- draws ---
+draw_result_title: "🎉 <b>Draw complete</b> — \"{name}\", round {period}"
+draw_result_winner: "🎊 {who} wins the <b>{amount} {currency}</b> pool!"
+draw_result_eligible_count: "They were drawn among the {count} member(s) with a verified payment before the draw time."
+payout_admin_note: "👩‍💼 Admin: confirm the winner actually received the pool with /payout — that opens the next round."
+draw_verification: "🔍 <b>Verify it yourself:</b> seed <code>{seed}</code> (sha256 = the commitment hash <code>{hash}</code> published when the round opened). Winner = sorted([{ids}]) picked with Random(seed)."
+draw_overdue_group: "⏰ The draw time for \"{name}\" (round {period}) has passed, but nobody has a verified payment yet. Once payments are verified an admin can /drawnow, or /postpone 24 to move the draw."
+draw_overdue_admin_dm: "⏰ \"{name}\" (round {period}): the draw time passed with ZERO verified payments. Options: verify proofs with /pending then /drawnow — or /postpone 24 in the group."
+overdue_eligible_admin_dm: "🔔 \"{name}\" (round {period}): {count} member(s) have now verified their payment after the deadline. Run /drawnow in the group to draw, or /postpone 24 to give others more time."
+pre_draw_review_reminder: "⏰ Heads up: \"{name}\" (round {period}) draws at {when}, and {count} payment proof(s) are still awaiting review. Unverified members won't be in the draw — review them with /pending in the group."
+dm_you_won: "🎉 Congratulations! You won the \"{name}\" draw for round {period}: <b>{amount} {currency}</b>! The group has been announced — the admin will hand over your pool."
+dm_cycle_started: "🚀 \"{group_name}\" has started! Your first contribution of {amount} {currency} is due. Reply here with your payment proof, or run /contribute for details.\n⏰ First draw: {when} — pay and get verified before then to be in the draw."
+pin_permission_missing: "⚠️ I couldn't pin the message — make sure I have the \"Pin Messages\" admin right in this group so the draw time stays visible."
+
+# --- recipient / payout ---
+recipient_winner_info: "🎯 Round {period} winner: {who} — {amount} {currency} ({state})"
+recipient_pending_info: "⏳ This round's winner hasn't been drawn yet.\n⏰ Draw: {when} ({countdown})\n🤫 Nobody knows who wins until then — not even the admins."
+payout_announcement: "🎊 \"{name}\" — round {period} pool of {amount} {currency} handed to {who}!"
+dm_payout_received: "🎉 You've received your Equb payout for \"{name}\": {amount} {currency}. Please confirm receipt with the admin."
+cycle_completed: "🏁 \"{name}\" has completed its full cycle — every member has received their pool. Well done! An admin can start a new one with /newequb (tip: use the auto restart parameter next time)."
+period_advanced: "▶️ Now in period {period} of {total}."
+dm_new_period: "📆 \"{name}\" — round {period} has opened. Your contribution of {amount} {currency} is due. Reply here with proof, or run /contribute.\n⏰ Draw: {when} — get verified before then to be in the draw."
+dm_new_cycle: "🔄 \"{name}\" just started a NEW cycle (#{cycle})! Your contribution of {amount} {currency} for round 1 is due. Reply here with proof, or run /contribute.\n⏰ First draw: {when} — get verified before then to be in the draw."
+usage_postpone: "Usage: /postpone <hours> — e.g. /postpone 24 (default {default})."
+draw_postponed: "⏩ Draw postponed. New draw time: <b>{when}</b> ({countdown})."
+everyone_contributed: "Everyone has already contributed for this round."
+dm_reminder: "⏰ Reminder: your contribution of {amount} {currency} for \"{name}\" (round {period}) is still due. Reply here with your payment proof — unverified payments are excluded from the draw."
+reminders_sent: "Reminder sent to {count} member(s)."
+no_payout_history: "No payouts recorded yet for this group."
+history_title: "📜 Payout history — \"{name}\""
+history_line: "Round {period}: {who} — {amount} {currency} ({state})"
+
+# --- contributing ---
+contribute_in_private: "Please message me privately to submit your contribution — tap my name and send /contribute there."
+no_pending_contribution: "You don't have any Equb contribution waiting on you right now."
+contribution_already_submitted: "Your proof for \"{name}\" is already submitted and waiting for an admin to review it."
+contribute_instructions: "💰 \"{name}\" — round {period}\nAmount due: {amount} {currency}\n⏰ Pay and get verified before the draw: {when}"
+payment_methods_header: "Payment methods:"
+contribute_send_proof: "Once you've paid, just send me a screenshot or the transaction ID as a message here."
+proof_received: "✅ Got it — your proof for \"{name}\" has been sent to the admins for review."
+no_pending_reviews: "No contributions are waiting for review right now."
+pending_review_line: "{who}\nRound {period} — {amount} {currency}"
+pending_review_proof_text: "Proof: {proof}"
+review_result_verified: "✅ Approved"
+review_result_rejected: "❌ Rejected"
+dm_contribution_verified: "✅ Your contribution of {amount} {currency} for \"{name}\" (round {period}) was approved — you're in this round's draw. Thank you!"
+dm_contribution_rejected: "❌ Your contribution proof for \"{name}\" (round {period}, {amount} {currency}) was rejected. Please check with the admin and resubmit with /contribute."
+
+# --- admin management ---
+usage_addadmin: "Usage: /addadmin <telegram_id>"
+admin_added: "✅ {admin_id} is now an admin."
+usage_deladmin: "Usage: /deladmin <telegram_id>"
+admin_removed: "✅ {admin_id} is no longer an admin."
+admins_list_header: |
+  Current admins:
+  {list}
+usage_chat: "Usage: /chat <telegram_id> <text>  (or reply to a message with /chat <telegram_id>)"
+chat_sent: "✅ Message sent."
+chat_send_failed: "❌ Couldn't send the message — the user may not have started a chat with me."
+chat_need_reply_or_text: "Reply to a message with this command, or provide text: /chat <telegram_id> <text>"
+chat_forwarded: "✅ Message forwarded."
+chat_forward_failed: "❌ Couldn't forward the message."
+
+# --- payment methods ---
+usage_addpayment: "Usage: /addpayment Name | Details\nExample: /addpayment Telebirr | 09xxxxxxxx"
+payment_added: "✅ Payment method added (id {payment_id}): {name}"
+usage_editpayment: "Usage: /editpayment <id> | Name | Details"
+payment_not_found: "Payment method not found."
+payment_updated: "✅ Payment method updated: {name}"
+usage_delpayment: "Usage: /delpayment <id>"
+payment_removed: "✅ Payment method removed."
+usage_togglepayment: "Usage: /togglepayment <id>"
+state_active: "active"
+state_inactive: "inactive"
+payment_toggled: "✅ {name} is now {state}."
+payment_list_empty: "No payment methods configured yet. Add one with /addpayment."
+payment_list_header: "💳 Payment methods:"
+payment_list_line: "[{payment_id}] {name}: {details} ({state})"

@@ -1,0 +1,54 @@
+# Partial Afaan Oromoo translations. Any key not listed here automatically
+# falls back to English (see core/i18n.py) — safe to extend gradually.
+
+language_name_en: "English"
+language_name_am: "አማርኛ"
+language_name_om: "Afaan Oromoo"
+
+start_welcome: |
+  👋 Baga nagaan gara Digital Equb bot dhufte!
+
+  Equb jechuun garee qusannaa marsaa ti: hunda isaanii yeroo tokkoon tokkoon walqixa kaffalu, marsaa tokko keessatti miseensa tokko maallaqa walitti qabame guutuu ni argata — hanga hundi isaanii dabalatanitti.
+
+  Jalqabuuf bot kana gara garee keessanii dabalaa, ergasii /help achitti fayyadamaa.
+only_admin_can_change_language: "Afaan jijjiiruu kan danda'u admin qofa dha."
+choose_language: "Afaan filadhu:"
+language_set_confirmation: "✅ Afaan jijjiirameera."
+admins_only: "Adminoota qofaaf."
+no_open_group: "Chat kana keessatti Equb bananaan hin jiru. Adminiin /newequb fayyadamee eegaluu danda'a."
+no_active_group: "Chat kana keessatti amma marsaa Equb hojjetaa jiru hin jiru."
+
+group_created: "✅ «{name}» (Equb #{number}) uumameera — miseensa tokkoof marsaa tokkoof {amount} {currency}. Miseensonni amma /joinequb godhuu danda'u."
+joined_group: "🙋 «{name}» seenteerta. Hanga ammaatti miseensota: {count}."
+left_group: "👋 «{name}» keessaa baateerta."
+members_title: "👥 Miseensota «{name}» ({count}):"
+group_cancelled: "🚫 «{name}» haqameera."
+
+group_status_open: "banaa (seenuuf)"
+group_status_active: "hojjetaa jira"
+group_status_completed: "xumurameera"
+group_status_cancelled: "haqameera"
+
+frequency_weekly: "torbanittii"
+frequency_biweekly: "torban lamaanitti"
+frequency_monthly: "ji'aan"
+
+status_title: "📊 «{name}» (Equb #{number})"
+status_waiting_to_start: "Adminiin /startcycle akka hojjetu eeggachaa jira."
+payout_paid: "kaffalameera ✅"
+payout_pending: "eeggataa jira ⏳"
+
+contribute_in_private: "Maaloo dhuunfaan ergaa naa ergaa, achittis /contribute fayyadamaa."
+no_pending_contribution: "Yeroo ammaa kaffaltiin Equb si eeggatu hin jiru."
+contribute_send_proof: "Erga kaffaltee booda, ragaa kaffaltii (suuraa ykn lakkoofsa daldalaa) asitti naa ergi."
+proof_received: "✅ Ragaan «{name}» siif argameera — adminootaaf ergameera."
+
+cycle_completed: "🏁 «{name}» marsaa isaa guutuu xumureera — miseensonni hundi kaffaltii isaanii argataniiru. Baga gammaddan!"
+everyone_contributed: "Hundi isaanii marsaa kana kaffalaniiru."
+
+# --- lottery ---
+frequency_every_n_days: "guyyaa {n} qofaatti"
+status_next_draw: "⏰ Ho'aa ittiinuf: <b>{when}</b> ({countdown})"
+status_secret_note: "🤫 Moostaan yeroo ho'aatiin haadhu — hanga sanaa namni tokko hin beeku, adminootus akka ta'e."
+draw_result_winner: "🎊 {who} <b>{amount} {currency}</b> moatteera!"
+dm_you_won: "🎉 Baga gamaddan! Ho'aa «{name}» marsaa {period} moatteetta: <b>{amount} {currency}</b>!"

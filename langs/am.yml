@@ -1,0 +1,64 @@
+# Partial Amharic translations. Any key not listed here automatically
+# falls back to English (see core/i18n.py) — safe to extend gradually.
+
+language_name_en: "English"
+language_name_am: "አማርኛ"
+language_name_om: "Afaan Oromoo"
+
+start_welcome: |
+  👋 እንኳን ወደ ዲጂታል እቁብ ቦት በደህና መጡ!
+
+  እቁብ ማለት የተራ ቁጠባ ቡድን ነው፦ ሁሉም በየዙሩ እኩል መጠን ያዋጣል፣ በእያንዳንዱ ዙር አንድ አባል በዕጣ ሙሉውን ገንዘብ ያሸንፋል — እስከ ሁሉም እስኪያደርሳቸው ድረስ።
+
+  አሸናፊው ማን እንደሚሆን ማንም አያውቅም — አድሚኖችም እስከ ሶስቱ ጊዜ ድረስ።
+
+  ለመጀመር ቦቱን ወደ ቡድናችሁ ጨምሩ፣ ከዚያ /help ተይ.
+only_admin_can_change_language: "ቋንቋን መቀየር የሚችለው አድሚን ብቻ ነው።"
+choose_language: "ቋንቋ ይምረጡ፦"
+language_set_confirmation: "✅ ቋንቋ ተቀይሯል።"
+admins_only: "ለአድሚኖች ብቻ።"
+no_open_group: "በዚህ ቻት ውስጥ ገና የተከፈተ እቁብ የለም። አድሚን /newequb በመጠቀም መጀመር ይችላል።"
+no_active_group: "በዚህ ቻት ውስጥ አሁን ንቁ የእቁብ ዙር የለም።"
+
+group_created: "✅ «{name}» (እቁብ #{number}) ተፈጥሯል — በአባል በዙር {amount} {currency}። አባላት አሁን /joinequb ማድረግ ይችላሉ።"
+joined_group: "🙋 «{name}» ገብተዋል። እስካሁን አባላት: {count}።"
+left_group: "👋 «{name}» ለቀዋል።"
+members_title: "👥 የ«{name}» አባላት ({count}):"
+group_cancelled: "🚫 «{name}» ተሰርዟል።"
+
+group_status_open: "ለመቀላቀል ክፍት"
+group_status_active: "ንቁ"
+group_status_completed: "ተጠናቋል"
+group_status_cancelled: "ተሰርዟል"
+
+frequency_weekly: "በየሳምንቱ"
+frequency_biweekly: "በየሁለት ሳምንቱ"
+frequency_monthly: "በየወሩ"
+
+status_title: "📊 «{name}» (እቁብ #{number})"
+status_waiting_to_start: "አድሚን /startcycle እስኪያደርግ በመጠበቅ ላይ።"
+payout_paid: "ተከፍሏል ✅"
+payout_pending: "በመጠባበቅ ላይ ⏳"
+
+contribute_in_private: "እባክዎ ለግል መልእክት ይላኩልኝ እና እዚያ /contribute ይጠቀሙ።"
+no_pending_contribution: "አሁን የሚጠበቅብዎት የእቁብ መዋጮ የለም።"
+contribute_send_proof: "ከከፈሉ በኋላ፣ የክፍያ ማረጋገጫ ፎቶ ወይም የግብይት ቁጥር እዚህ ይላኩልኝ።"
+proof_received: "✅ ደረሰኝ ደርሶኛል — ለ«{name}» ማረጋገጫዎ ለአድሚኖች ተልኳል።"
+
+cycle_completed: "🏁 «{name}» ሙሉ ዙሩን አጠናቋል — ሁሉም አባላት ክፍያቸውን ተቀብለዋል። እንኳን ደስ አላችሁ!"
+everyone_contributed: "ሁሉም በዚህ ዙር አዋጥተዋል።"
+
+# --- lottery (ሶስት) ---
+frequency_every_n_days: "በየ{n} ቀኑ"
+cycle_first_draw: "⏰ የመጀመሪያ ሶስት: <b>{when}</b> ({countdown})"
+next_round_draw: "⏰ ሶስት: <b>{when}</b> ({countdown})"
+cycle_secret_note: "🤫 አሸናፊው በሶስት ጊዜው በዕጣ ይወጣል — እስከዚያው ድረስ ማንም አያውቀውም፣ አድሚኖችም እንኳ።"
+status_next_draw: "⏰ ቀጣዩ ሶስት: <b>{when}</b> ({countdown})"
+status_draw_overdue: "⚠️ የሶስት ጊዜው አልፎታል ግን እስካሁን የተረጋገጠ ክፍያ የለም። አድሚን /drawnow ወይም /postpone 24 መጠቀም ይችላል።"
+status_secret_note: "🤫 አሸናፊው በሶስት ጊዜው በዕጣ ይወጣል — እስከዚያው ድረስ ማንም አያውቀውም፣ አድሚኖችም እንኳ።"
+draw_result_title: "🎉 <b>ሶስት ተጠናቋል</b> — «{name}»፣ ዙር {period}"
+draw_result_winner: "🎊 {who} <b>{amount} {currency}</b> አሸንፏል!"
+draw_overdue_group: "⏰ የ«{name}» (ዙር {period}) የሶስት ጊዜ አልፎታል፣ ግን የተረጋገጠ ክፍያ የለም። ክፍያዎች ከተረጋገጡ በኋላ አድሚን /drawnow ወይም /postpone 24 ይጠቀም።"
+dm_you_won: "🎉 እንኳን ደስ አለዎት! የ«{name}» ዙር {period} ሶስት አሸነፉ፦ <b>{amount} {currency}</b>!"
+dm_contribution_verified: "✅ የ«{name}» (ዙር {period}፣ {amount} {currency}) መዋጮዎ ጸድቋል — በዚህ ዙር ሶስት ውስጥ አሉ።"
+recipient_pending_info: "⏳ የዚህ ዙር አሸናፊ ገና አልተወጣም።\n⏰ ሶስት: {when} ({countdown})\n🤫 እስከዚያው ድረስ ማንም አያውቀውም።"

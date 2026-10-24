@@ -29,8 +29,8 @@ async def send_with_optional_effect(bot, chat_id: int, text: str, **kwargs: Any)
     send_kwargs = dict(kwargs)
     if effect is not None:
         try:
-            # Bot API expects an integer id.
-            send_kwargs["message_effect_id"] = int(effect)
+            # Telegram's message_effect_id must be a string (not int).
+            send_kwargs["message_effect_id"] = str(effect)
             return await bot.send_message(chat_id, text, **send_kwargs)
         except Exception as e:
             logger.info(

@@ -14,44 +14,63 @@ start_welcome: |
 
   Nobody — not even the admins — knows who wins a round until the draw happens at its scheduled time.
 
-  Add me to a group to get started, then run /help there to see every command.
+  Add me to a group to get started. Open the <b>/</b> menu for commands, or run /help for the full guide (commands marked [admin] need a bot admin).
 help_text: |
-  <b>Setting up (group chat, admin only)</b>
-  /newequb Name | amount | frequency | [currency] | [restart] — create an Equb. frequency: weekly, biweekly, monthly, or every N days (e.g. <code>3d</code>). restart: <code>once</code> (default) or <code>auto</code> to start a fresh cycle automatically when one completes.
-  Example: <code>/newequb Family Equb | 500 | weekly | ETB | auto</code>
+  <b>Digital Equb — command guide</b>
+  Commands marked <b>[admin]</b> require a bot admin (see /listadmins). Open the "/" menu in Telegram for the same list.
 
-  <b>Joining (group chat)</b>
-  /joinequb — join the Equb. If the cycle is already running you join mid-cycle: you pay up for every round since it started (back-pay) before you can win one. The pinned message also has 💰 Contribute and ➕ Join buttons.
-  /addmember @user | user_id | reply — admin adds a specific person (same mid-cycle back-pay rule)
-  /leaveequb — leave before the cycle starts
-  /members — list current members
-  /removemember — admin removes a member
+  <b>Everyone</b>
+  /help — this message
+  /start — welcome + deep links (e.g. Contribute)
+  /language — set language (en / am / om)
+  /contribute · /pay — (private chat) see what you owe and how to pay
+  /joinequb · /join — join the Equb in this group (mid-cycle = back-pay required)
+  /leaveequb · /leave — leave while the group is still open
+  /members — list members
+  /status · /board — next draw, who paid, who already won (never the future winner)
+  /recipient · /whoisnext — drawn winner this round, or when the draw is due
+  /history — payout history
+  /verify [period] · /verify &lt;cycle&gt; &lt;period&gt; — re-check draw fairness
+  /statement [cycle] · /statement csv [cycle] — cycle totals; csv = copy-paste export
+  /listequbs · /equbs — every Equb created in this chat
 
-  <b>Running the cycle (group chat, admin)</b>
-  /startcycle — lock membership, open round 1, schedule the first draw
-  /status — next draw time, who has paid, who already won (never the future winner — nobody knows it)
-  /drawnow — draw the winner right now among members who have paid
-  /postpone hours — move a pending draw (e.g. /postpone 24)
-  /payout — confirm the winner received the pool; opens the next round
-  /recipient — this round's drawn winner (or when the draw is coming)
-  /remind — DM everyone who hasn't paid yet this round
-  /history — full payout history for this group
-  /cancelequb — cancel the group
-  /listequbs — list every Equb group ever run in this chat
+  <b>Setup [admin]</b>
+  /newequb · /ne — <code>Name | amount | frequency | [currency] | [restart]</code>
+  Frequency: weekly, biweekly, monthly, or <code>Nd</code> (e.g. 3d). Restart: <code>once</code> (default) or <code>auto</code>.
+  Example: <code>/newequb Family | 500 | weekly | ETB | auto</code>
+  /startcycle · /sc — lock membership, open round 1, pin first draw time
+  /addmember · /am — add by @username, numeric id, or reply
+  /removemember · /rmmember — remove a member (with guards)
+  /cancelequb — cancel Equb (asks for Confirm)
 
-  <b>How draws work</b>
-  At the scheduled draw time I randomly draw the winner among members whose payment was VERIFIED before the draw — unpaid members are excluded from that round. The exact draw date &amp; time is always pinned here. Each draw is provably fair: the seed hash is published when the round opens, the seed is revealed in the result.
+  <b>Payments &amp; draws [admin]</b>
+  /pending · /pd — review payment proofs (Approve / Reject)
+  /drawnow · /draw — draw now among verified payers
+  /postpone [hours] — move the draw (default from env)
+  /payout · /markpaid — confirm winner was paid offline (asks for Confirm; advances cycle)
+  /remind — DM members who still owe this round
+  /unverify &lt;id&gt; [period] [reason] — reverse a verification before the draw
+  /reconcile — finish advance if payout was marked paid but the cycle stuck
 
-  <b>Contributing (private chat with me, anyone)</b>
-  /contribute — see everything you owe (round by round, including back-pay) and how to pay
-  Or just tap the 💰 Contribute button on the pinned message in your group — it opens this chat for you.
-  Then just send me your payment proof (a screenshot or a text with your transaction ID) — I'll match it to your oldest unpaid round automatically. Make sure you send it early enough for an admin to VERIFY it before the draw!
+  <b>Transparency [admin]</b>
+  /auditlog · /audit — recent financial/admin events
 
-  <b>Admin management</b>
-  /addadmin, /deladmin, /listadmins
-  /addpayment, /editpayment, /delpayment, /togglepayment, /listpayments
+  <b>Bot admin &amp; payment methods [admin]</b>
+  /addadmin · /aadmin &lt;telegram_id&gt;
+  /deladmin · /dadmin &lt;telegram_id&gt;
+  /listadmins · /admins
+  /addpayment Name | Details
+  /editpayment &lt;id&gt; | Name | Details
+  /delpayment &lt;id&gt;
+  /togglepayment &lt;id&gt;
+  /listpayments · /payments
+  /chat · /msg &lt;telegram_id&gt; &lt;text&gt; — message a user via the bot
 
-  /language — change this chat's language
+  <b>How it works</b>
+  Everyone pays the same amount each round. Only <b>verified</b> payments enter the draw. At the scheduled time one winner is chosen at random among eligible members (provably fair: seed hash when the round opens, seed revealed at draw — check with /verify). After the admin confirms the pool was handed over offline (/payout), the next round opens until everyone has received once (or the cycle auto-restarts if created with <code>auto</code>).
+
+  <b>Contributing</b>
+  In a private chat with me: /contribute, or tap 💰 Contribute on the pinned group message. Send a screenshot or transaction ID — it maps to your oldest unpaid round. Submit early enough for an admin to verify before the draw.
 only_admin_can_change_language: "Only an admin can change the language in a group chat."
 choose_language: "Choose a language:"
 language_set_confirmation: "✅ Language updated."
@@ -79,6 +98,13 @@ members_line: "{index}. {who}{extra}"
 members_line_received: " — ✅ received the pool (round {period})"
 members_line_backpay: " — ⏳ back-paying rounds 1..{period}"
 group_cancelled: "🚫 \"{name}\" has been cancelled."
+group_cancelled_summary: "Open obligations closed: {open_count}. Verified contributions left on the ledger: {verified_count}."
+group_cancelled_unpaid_winner: "⚠️ Drawn but unpaid winner: {who} is still owed {amount} {currency} for round {period} — settle offline."
+confirm_yes: "✅ Confirm"
+confirm_no: "❌ Abort"
+confirm_aborted: "Cancelled — no changes made."
+confirm_payout_prompt: "Confirm payout for \"{name}\" round {period}?\nWinner: {who}\nAmount: {amount} {currency}\nThis advances the cycle."
+confirm_cancel_prompt: "Cancel Equb \"{name}\" (status: {status})?\nOpen obligations will be closed; verified ledger rows stay for history."
 no_groups_yet: "No Equb groups have been created in this chat yet."
 groups_list_title: "📋 Equb groups in this chat:"
 group_summary_line: "#{number} {name} — {status} — {amount} {currency}/{frequency}"
@@ -106,7 +132,12 @@ joined_midcycle: "🙋 You've joined \"{name}\" ({count} members) — the cycle 
 error_invalid_frequency: "Frequency must be weekly, biweekly, monthly, or every N days — e.g. 3d, 7d, 30d."
 error_order_mode_removed: "This Equb now runs as a lottery — there's no fixed order anymore. Every round's winner is drawn at random at the draw time. Just drop the order parameter: /newequb Name | amount | frequency"
 error_invalid_restart_mode: "Restart mode must be 'once' or 'auto'."
-error_invalid_amount: "The contribution amount must be a positive number."
+error_invalid_amount: "The contribution amount must be a positive number between 1 and 10,000,000."
+error_invalid_name: "Equb name must be 1–80 printable characters."
+error_invalid_currency: "Currency must be a short letter code (e.g. ETB, USD)."
+error_payout_not_paid_yet: "This round's payout is not marked paid yet — use /payout first."
+error_nothing_to_reconcile: "Nothing to reconcile — the cycle has already advanced, or the state is not recoverable this way."
+reconcile_ok: "✅ Reconciled stuck payout for round {period}; cycle advanced."
 error_group_already_exists: "There's already an open or active Equb group in this chat. Finish or /cancelequb it first."
 error_group_not_open: "This only works while the Equb is open for joining or has an active cycle."
 error_already_member: "That user is already a member of this group."
@@ -163,6 +194,25 @@ draw_result_winner: "🎊 {who} wins the <b>{amount} {currency}</b> pool!"
 draw_result_eligible_count: "They were drawn among the {count} member(s) with a verified payment before the draw time."
 payout_admin_note: "👩‍💼 Admin: confirm the winner actually received the pool with /payout — that opens the next round."
 draw_verification: "🔍 <b>Verify it yourself:</b> seed <code>{seed}</code> (sha256 = the commitment hash <code>{hash}</code> published when the round opened). Winner = sorted([{ids}]) picked with Random(seed)."
+usage_verify: "Usage: /verify — latest draw\n/verify &lt;period&gt; — that period of the current cycle\n/verify &lt;cycle&gt; &lt;period&gt; — specific cycle and period"
+verify_no_draw: "No draw has been recorded for this group yet."
+verify_no_draw_period: "No draw found for cycle {cycle}, period {period}."
+verify_ok: |
+  ✅ <b>Draw verified</b> — \"{name}\" cycle {cycle}, round {period}
+  Winner: {who}
+  Seed: <code>{seed}</code>
+  Hash: <code>{hash}</code>
+  Eligible: [{ids}]
+  Recomputed pick matches the recorded winner and the commitment hash.
+verify_fail: |
+  ❌ <b>Verification failed</b> — \"{name}\" cycle {cycle}, round {period}
+  Recorded winner: {who}
+  Issues: {errors}
+  Seed: <code>{seed}</code>
+  Stored hash: <code>{hash}</code>
+  Expected hash: <code>{expected_hash}</code>
+  Recomputed winner: {recomputed}
+  Eligible: [{ids}]
 draw_overdue_group: "⏰ The draw time for \"{name}\" (round {period}) has passed, but nobody has a verified payment yet. Once payments are verified an admin can /drawnow, or /postpone 24 to move the draw."
 draw_overdue_admin_dm: "⏰ \"{name}\" (round {period}): the draw time passed with ZERO verified payments. Options: verify proofs with /pending then /drawnow — or /postpone 24 in the group."
 overdue_eligible_admin_dm: "🔔 \"{name}\" (round {period}): {count} member(s) have now verified their payment after the deadline. Run /drawnow in the group to draw, or /postpone 24 to give others more time."
@@ -189,6 +239,25 @@ no_payout_history: "No payouts recorded yet for this group."
 history_title: "📜 Payout history — \"{name}\""
 history_line: "Round {period}: {who} — {amount} {currency} ({state})"
 
+# --- statement / corrections / audit ---
+usage_statement: "Usage: /statement — current cycle\n/statement &lt;cycle&gt; — that cycle\n/statement csv — CSV text export\n/statement csv &lt;cycle&gt;"
+statement_title: "📊 <b>Cycle statement</b> — \"{name}\", cycle {cycle}"
+statement_totals: "In: expected {expected} {currency} · verified {verified} {currency}\nOut: disbursed {disbursed} {currency} · pending payout {pending_out} {currency}"
+statement_members_header: "<b>Members</b> (verified / expected · open · received pool)"
+statement_member_line: "• {who}: {verified}/{expected} verified, {pending} open, pool {received}"
+statement_payouts_header: "<b>Payouts</b>"
+statement_payout_line: "Round {period}: {who} — {amount} {currency} ({state})"
+usage_unverify: "Usage: /unverify &lt;telegram_id&gt; [period] [reason]\nOr reply to a member: /unverify [period] [reason]\nOnly works before that round is drawn."
+unverify_already_drawn: "Round {period} already has a draw — verification cannot be reversed."
+unverify_not_found: "No contribution found for that member and period."
+unverify_not_verified: "That contribution is not verified (status: {status})."
+unverify_failed: "Could not reverse verification (maybe it changed concurrently)."
+unverify_ok: "✅ Reversed verification for {who}, round {period}. They can resubmit with /contribute."
+dm_contribution_reversed: "⚠️ Your verified contribution for \"{name}\" (round {period}) was reversed by an admin. Reason: {reason}. Please resubmit proof with /contribute."
+audit_empty: "No audit events recorded for this group yet."
+audit_title: "🧾 <b>Audit log</b> — \"{name}\" (latest 20)"
+audit_line: "{when} · {action} · actor {actor} · target {target} · period {period}"
+
 # --- contributing ---
 contribute_in_private: "Please message me privately to submit your contribution — tap the button below and I'll open our chat for you."
 no_pending_contribution: "You don't have any Equb contribution waiting on you right now."
@@ -197,6 +266,7 @@ contribute_header: "💰 You have {count} outstanding contribution(s):"
 contribute_pending_line: "• \"{name}\" — round {period}: {amount} {currency} ({state}) — draw: {when}"
 state_to_pay: "pay now 💰"
 state_awaiting_review: "awaiting review ⏳"
+state_rejected: "rejected — resubmit ❌"
 payment_methods_header: "Payment methods:"
 contribute_send_proof: "Once you've paid, just send me a screenshot or the transaction ID as a message here — I'll match it to your oldest unpaid round."
 proof_received: "✅ Got it — your proof for \"{name}\" has been sent to the admins for review."
@@ -206,6 +276,8 @@ pending_review_line: "{who}\nRound {period} — {amount} {currency}"
 pending_review_proof_text: "Proof: {proof}"
 review_result_verified: "✅ Approved"
 review_result_rejected: "❌ Rejected"
+review_already_processed: "This contribution was already reviewed."
+review_invalid_action: "Invalid review action."
 dm_contribution_verified: "✅ Your contribution of {amount} {currency} for \"{name}\" (round {period}) was approved — you're in this round's draw. Thank you!"
 dm_contribution_rejected: "❌ Your contribution proof for \"{name}\" (round {period}, {amount} {currency}) was rejected. Please check with the admin and resubmit with /contribute."
 

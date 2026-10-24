@@ -5,12 +5,16 @@ Run this once after deploying to Vercel (and again if the URL changes):
 
 Requires BOT_TOKEN, WEBHOOK_URL and (optionally) WEBHOOK_SECRET in your
 environment — see .env.example.
+
+Also refreshes the Telegram "/" command menu.
 """
 
 import asyncio
 import os
 
 from aiogram import Bot
+
+from core.bot_commands import register_bot_commands
 
 
 async def main():
@@ -20,6 +24,7 @@ async def main():
 
     bot = Bot(token=token)
     await bot.set_webhook(url=url, secret_token=secret, drop_pending_updates=True)
+    await register_bot_commands(bot)
     info = await bot.get_webhook_info()
     print(info)
     await bot.session.close()

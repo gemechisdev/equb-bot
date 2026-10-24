@@ -19,6 +19,8 @@ chat_settings        per-chat language preference.
 users                lightweight identity cache (telegram_id <-> username)
                      populated by middleware, so admins can add members by
                      @username — the Bot API has no username->id lookup.
+audit_events         append-only log of financial and admin actions
+                     (contribution reviews, draws, payouts, reversals).
 
 Lottery draw state lives on the group document:
     seed / seed_hash     commit/reveal pair for the CURRENT period. The
@@ -171,12 +173,17 @@ def _draw_fields(seed: Optional[str], seed_hash: Optional[str], draw_at: Optiona
     }
 
 
-async def start_group_cycle(group_id, seed: str, seed_hash: str, draw_at: datetime) -> None:
-    """First cycle start: lock membership, open period 1, schedule round 1."""
+async def start_group_cycle(group_id, seed: str, seed_hash: str, draw_at: datetime) -> Optional[dict]:
+    """First cycle start: lock membership, open period 1, schedule round 1.
+
+    Conditional on status still being `open` so two concurrent /startcycle
+    commands cannot both succeed. Returns the updated group, or None if the
+    group was no longer open.
+    """
     db = get_db()
     now = utcnow()
-    await db.equb_groups.update_one(
-        {"_id": _oid(group_id)},
+    return await db.equb_groups.find_one_and_update(
+        {"_id": _oid(group_id), "status": "open"},
         {
             "$set": {
                 "status": "active",
@@ -188,6 +195,7 @@ async def start_group_cycle(group_id, seed: str, seed_hash: str, draw_at: dateti
                 **_draw_fields(seed, seed_hash, draw_at),
             }
         },
+        return_document=True,
     )
 
 
@@ -298,10 +306,18 @@ async def get_due_draw_groups(now: Optional[datetime] = None) -> List[dict]:
 
 
 async def set_group_drawn(group_id) -> None:
+    """Mark the current round drawn and clear the secret seed from the group
+    document. The seed remains on the immutable payout record for verification;
+    leaving it on the group would keep it readable until the next round opens.
+    """
     db = get_db()
     await db.equb_groups.update_one(
         {"_id": _oid(group_id)},
-        {"$set": {"draw_state": "drawn", "draw_started_at": None}},
+        {"$set": {
+            "draw_state": "drawn",
+            "draw_started_at": None,
+            "seed": None,  # secret no longer needed; revealed on the payout
+        }},
     )
 
 
@@ -348,10 +364,44 @@ async def advance_group_period(group_id, new_period: int) -> None:
     await db.equb_groups.update_one({"_id": _oid(group_id)}, {"$set": {"current_period": new_period}})
 
 
-async def complete_group(group_id) -> None:
+async def advance_group_period_with_draw(
+    group_id,
+    expected_period: int,
+    new_period: int,
+    seed: str,
+    seed_hash: str,
+    draw_at: datetime,
+) -> Optional[dict]:
+    """Atomically move the group from `expected_period` to `new_period` and
+    schedule the next draw. Returns the updated group doc, or None if the
+    period had already advanced (idempotent retry / concurrent payout)."""
     db = get_db()
-    await db.equb_groups.update_one(
-        {"_id": _oid(group_id)}, {"$set": {"status": "completed", "completed_at": utcnow()}}
+    return await db.equb_groups.find_one_and_update(
+        {
+            "_id": _oid(group_id),
+            "status": "active",
+            "current_period": expected_period,
+        },
+        {"$set": {
+            "current_period": new_period,
+            **_draw_fields(seed, seed_hash, draw_at),
+        }},
+        return_document=True,
+    )
+
+
+async def complete_group(group_id, expected_period: Optional[int] = None) -> Optional[dict]:
+    """Mark the group completed. When `expected_period` is given, only
+    succeeds if the group is still on that period (avoids completing after
+    a concurrent advance)."""
+    db = get_db()
+    query: dict = {"_id": _oid(group_id), "status": "active"}
+    if expected_period is not None:
+        query["current_period"] = expected_period
+    return await db.equb_groups.find_one_and_update(
+        query,
+        {"$set": {"status": "completed", "completed_at": utcnow()}},
+        return_document=True,
     )
 
 
@@ -363,7 +413,18 @@ async def add_member(
     group_id, telegram_id: int, username: Optional[str], display_name: Optional[str],
     joined_period: Optional[int] = None,
 ) -> dict:
+    """Insert a member. If an active membership already exists (race with a
+    concurrent join), return that existing document instead of inserting a
+    duplicate. Callers that need a hard failure should check status first."""
     db = get_db()
+    existing = await db.equb_members.find_one({
+        "group_id": _oid(group_id),
+        "telegram_id": telegram_id,
+        "status": "active",
+    })
+    if existing:
+        return existing
+
     doc = {
         "group_id": _oid(group_id),
         "telegram_id": telegram_id,
@@ -427,6 +488,7 @@ async def remove_member(group_id, telegram_id: int) -> bool:
 
 
 async def mark_member_paid_out(group_id, telegram_id: int, period: int) -> None:
+    """Idempotent: safe to call again if the member is already marked paid out."""
     db = get_db()
     await db.equb_members.update_one(
         {"group_id": _oid(group_id), "telegram_id": telegram_id},
@@ -489,10 +551,25 @@ async def create_period_contributions(
     group_id, period: int, members: List[dict], amount: int, cycle_number: Optional[int] = None
 ) -> None:
     """Contributions are cycle-scoped: reusing period numbers across cycles
-    (after an auto-restart) must never leak old payments into a new cycle."""
+    (after an auto-restart) must never leak old payments into a new cycle.
+
+    Idempotent per (group, cycle, period, member): skips members who already
+    have a contribution for this round so a crashed / retried advance does
+    not create duplicates.
+    """
     db = get_db()
-    docs = [
-        {
+    for m in members:
+        query = {
+            "group_id": _oid(group_id),
+            "period": period,
+            "telegram_id": m["telegram_id"],
+        }
+        if cycle_number is not None:
+            query["cycle_number"] = cycle_number
+        existing = await db.equb_contributions.find_one(query, {"_id": 1})
+        if existing:
+            continue
+        await db.equb_contributions.insert_one({
             "group_id": _oid(group_id),
             "cycle_number": cycle_number,
             "period": period,
@@ -506,11 +583,7 @@ async def create_period_contributions(
             "submitted_at": None,
             "reviewed_at": None,
             "reviewed_by": None,
-        }
-        for m in members
-    ]
-    if docs:
-        await db.equb_contributions.insert_many(docs)
+        })
 
 
 async def get_contribution(group_id, period: int, telegram_id: int, cycle_number: Optional[int] = None) -> Optional[dict]:
@@ -554,12 +627,50 @@ async def member_has_unverified_contributions(group_id, cycle_number, telegram_i
     return found is not None
 
 
-async def submit_contribution_proof(contribution_id, proof: dict) -> None:
+async def submit_contribution_proof(contribution_id, proof: dict) -> Optional[dict]:
+    """Accept a payment proof only while the contribution is still open for
+    submission (`pending` or previously `rejected`).
+
+    Previous proofs are pushed onto `proof_history` (append-only ledger of
+    submissions). Returns the updated document, or None if already awaiting
+    review or verified.
+    """
     db = get_db()
-    await db.equb_contributions.update_one(
-        {"_id": _oid(contribution_id)},
-        {"$set": {"status": "awaiting_review", "proof": proof, "submitted_at": utcnow()}},
+    now = utcnow()
+    # Snapshot prior proof into history when resubmitting after rejection.
+    existing = await db.equb_contributions.find_one({"_id": _oid(contribution_id)})
+    if not existing or existing.get("status") not in ("pending", "rejected"):
+        return None
+
+    history_entry = None
+    if existing.get("proof"):
+        history_entry = {
+            "proof": existing["proof"],
+            "submitted_at": existing.get("submitted_at"),
+            "status_at_archive": existing.get("status"),
+            "reviewed_at": existing.get("reviewed_at"),
+            "reviewed_by": existing.get("reviewed_by"),
+            "archived_at": now,
+        }
+
+    update: dict = {
+        "$set": {
+            "status": "awaiting_review",
+            "proof": proof,
+            "submitted_at": now,
+            "reviewed_at": None,
+            "reviewed_by": None,
+        },
+    }
+    if history_entry:
+        update["$push"] = {"proof_history": history_entry}
+
+    result = await db.equb_contributions.find_one_and_update(
+        {"_id": _oid(contribution_id), "status": {"$in": ["pending", "rejected"]}},
+        update,
+        return_document=True,
     )
+    return result
 
 
 async def _pending_contribution_query(telegram_id: int) -> List[dict]:
@@ -581,7 +692,9 @@ async def _pending_contribution_query(telegram_id: int) -> List[dict]:
         {
             "telegram_id": telegram_id,
             "$or": or_clause,
-            "status": {"$in": ["pending", "awaiting_review"]},
+            # pending = still to pay; awaiting_review = proof submitted;
+            # rejected = needs a new proof (resubmit path).
+            "status": {"$in": ["pending", "awaiting_review", "rejected"]},
         },
         sort=[("period", 1), ("created_at", 1)],
     )
@@ -604,12 +717,93 @@ async def get_awaiting_review_contributions(group_id, cycle_number: Optional[int
 
 
 async def review_contribution(contribution_id, status: str, admin_id: int) -> Optional[dict]:
+    """Atomically approve or reject a contribution that is still awaiting review.
+
+    Only transitions from `awaiting_review` → `verified` / `rejected`.
+    Each decision is appended to `review_history` for an auditable trail.
+    Returns the updated document on success, or None if already processed.
+    """
+    if status not in ("verified", "rejected"):
+        raise ValueError(f"invalid review status: {status}")
+
     db = get_db()
-    await db.equb_contributions.update_one(
-        {"_id": _oid(contribution_id)},
-        {"$set": {"status": status, "reviewed_at": utcnow(), "reviewed_by": admin_id}},
+    now = utcnow()
+    result = await db.equb_contributions.find_one_and_update(
+        {"_id": _oid(contribution_id), "status": "awaiting_review"},
+        {
+            "$set": {
+                "status": status,
+                "reviewed_at": now,
+                "reviewed_by": admin_id,
+            },
+            "$push": {
+                "review_history": {
+                    "status": status,
+                    "admin_id": admin_id,
+                    "at": now,
+                },
+            },
+        },
+        return_document=True,
     )
+    return result
+
+
+async def reverse_contribution_verification(
+    contribution_id, admin_id: int, reason: str = ""
+) -> Optional[dict]:
+    """Admin correction: verified → pending so the member can resubmit.
+
+    Only allowed while status is still `verified`. Callers must also ensure
+    the round has not yet been drawn (no payout for that period). Appends to
+    review_history with status `reversed`.
+    """
+    db = get_db()
+    now = utcnow()
+    result = await db.equb_contributions.find_one_and_update(
+        {"_id": _oid(contribution_id), "status": "verified"},
+        {
+            "$set": {
+                "status": "pending",
+                "proof": None,
+                "submitted_at": None,
+                "reviewed_at": now,
+                "reviewed_by": admin_id,
+            },
+            "$push": {
+                "review_history": {
+                    "status": "reversed",
+                    "admin_id": admin_id,
+                    "at": now,
+                    "reason": reason or "",
+                },
+            },
+        },
+        return_document=True,
+    )
+    return result
+
+
+async def get_contribution_by_id(contribution_id) -> Optional[dict]:
+    db = get_db()
     return await db.equb_contributions.find_one({"_id": _oid(contribution_id)})
+
+
+async def cancel_open_contributions(group_id, cycle_number: Optional[int] = None) -> int:
+    """Mark pending / awaiting_review / rejected contributions as cancelled.
+    Verified rows stay intact as the historical ledger."""
+    db = get_db()
+    query: dict = {
+        "group_id": _oid(group_id),
+        "status": {"$in": ["pending", "awaiting_review", "rejected"]},
+    }
+    if cycle_number is not None:
+        query["cycle_number"] = cycle_number
+    result = await db.equb_contributions.update_many(
+        query,
+        {"$set": {"status": "cancelled", "cancelled_at": utcnow()}},
+    )
+    return result.modified_count
 
 
 async def count_verified_for_period(group_id, period: int) -> int:
@@ -664,21 +858,44 @@ async def get_payout(group_id, period: int, cycle_number: Optional[int] = None) 
     return await db.equb_payouts.find_one(query)
 
 
-async def mark_payout_paid(group_id, period: int, admin_id: int, cycle_number: Optional[int] = None) -> None:
+async def mark_payout_paid(
+    group_id, period: int, admin_id: int, cycle_number: Optional[int] = None
+) -> Optional[dict]:
+    """Atomically transition a payout from `pending` → `paid`.
+
+    Returns the updated payout document on success, or None if it was already
+    paid (or does not exist). Callers must treat None as 'already processed'
+    so concurrent /retrying /payout commands stay safe.
+    """
     db = get_db()
-    query: dict = {"group_id": _oid(group_id), "period": period}
+    query: dict = {
+        "group_id": _oid(group_id),
+        "period": period,
+        "status": "pending",
+    }
     if cycle_number is not None:
         query["cycle_number"] = cycle_number
-    await db.equb_payouts.update_one(
+    return await db.equb_payouts.find_one_and_update(
         query,
         {"$set": {"status": "paid", "paid_at": utcnow(), "paid_by": admin_id}},
+        return_document=True,
     )
 
 
 async def list_payouts(group_id) -> List[dict]:
     db = get_db()
-    cursor = db.equb_payouts.find({"group_id": _oid(group_id)}).sort("period", 1)
+    # Sort by cycle then period so auto-restart history is chronological.
+    cursor = db.equb_payouts.find({"group_id": _oid(group_id)}).sort(
+        [("cycle_number", 1), ("period", 1)]
+    )
     return await cursor.to_list(length=500)
+
+
+async def get_payout_for_verify(
+    group_id, period: int, cycle_number: Optional[int] = None
+) -> Optional[dict]:
+    """Fetch a drawn payout with the fields needed for public verification."""
+    return await get_payout(group_id, period, cycle_number)
 
 
 # ---------------------------------------------------------------------------
@@ -817,3 +1034,150 @@ async def delete_payment_method(payment_method_id) -> bool:
     db = get_db()
     result = await db.payment_methods.delete_one({"_id": _oid(payment_method_id)})
     return result.deleted_count > 0
+
+
+# ---------------------------------------------------------------------------
+# Indexes (call once on startup)
+# ---------------------------------------------------------------------------
+
+async def ensure_indexes() -> None:
+    """Create the indexes required for uniqueness and scheduler performance.
+
+    Safe to call repeatedly (create_index is idempotent). Partial unique
+    indexes enforce "at most one open/active Equb per chat" and "one active
+    membership per (group, user)" without blocking historical documents.
+    """
+    db = get_db()
+
+    # One non-terminal Equb per Telegram chat.
+    await db.equb_groups.create_index(
+        [("chat_id", 1)],
+        unique=True,
+        partialFilterExpression={"status": {"$in": ["open", "active"]}},
+        name="uniq_open_or_active_per_chat",
+    )
+    await db.equb_groups.create_index(
+        [("status", 1), ("draw_state", 1), ("draw_at", 1)],
+        name="scheduler_due_draws",
+    )
+    await db.equb_groups.create_index([("chat_id", 1), ("group_number", 1)], name="chat_group_number")
+
+    # One active membership per (group, user).
+    await db.equb_members.create_index(
+        [("group_id", 1), ("telegram_id", 1)],
+        unique=True,
+        partialFilterExpression={"status": "active"},
+        name="uniq_active_member",
+    )
+    await db.equb_members.create_index([("telegram_id", 1), ("status", 1)], name="member_by_user")
+
+    # One contribution per (group, cycle, period, member).
+    await db.equb_contributions.create_index(
+        [("group_id", 1), ("cycle_number", 1), ("period", 1), ("telegram_id", 1)],
+        unique=True,
+        name="uniq_contribution",
+    )
+    await db.equb_contributions.create_index(
+        [("group_id", 1), ("cycle_number", 1), ("status", 1)],
+        name="contributions_by_status",
+    )
+    await db.equb_contributions.create_index(
+        [("telegram_id", 1), ("status", 1)],
+        name="user_pending_contributions",
+    )
+
+    # One payout per (group, cycle, period).
+    await db.equb_payouts.create_index(
+        [("group_id", 1), ("cycle_number", 1), ("period", 1)],
+        unique=True,
+        name="uniq_payout",
+    )
+
+    await db.users.create_index([("telegram_id", 1)], unique=True, name="uniq_user")
+    await db.users.create_index([("username_lower", 1)], name="user_by_username")
+    await db.admins.create_index([("telegram_id", 1)], unique=True, name="uniq_admin")
+    await db.chat_settings.create_index([("chat_id", 1)], unique=True, name="uniq_chat_settings")
+
+    # Append-only audit trail.
+    await db.audit_events.create_index(
+        [("group_id", 1), ("created_at", -1)],
+        name="audit_by_group",
+    )
+    await db.audit_events.create_index(
+        [("action", 1), ("created_at", -1)],
+        name="audit_by_action",
+    )
+    await db.audit_events.create_index(
+        [("created_at", -1)],
+        name="audit_recent",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Audit log (append-only financial / admin events)
+# ---------------------------------------------------------------------------
+
+async def log_audit(
+    action: str,
+    *,
+    actor_id: Optional[int] = None,
+    group_id=None,
+    chat_id: Optional[int] = None,
+    target_telegram_id: Optional[int] = None,
+    contribution_id=None,
+    payout_id=None,
+    period: Optional[int] = None,
+    cycle_number: Optional[int] = None,
+    details: Optional[dict] = None,
+) -> dict:
+    """Append an immutable audit event. Never updates or deletes existing rows."""
+    db = get_db()
+    doc = {
+        "action": action,
+        "actor_id": actor_id,
+        "group_id": _oid(group_id) if group_id is not None else None,
+        "chat_id": chat_id,
+        "target_telegram_id": target_telegram_id,
+        "contribution_id": _oid(contribution_id) if contribution_id is not None else None,
+        "payout_id": _oid(payout_id) if payout_id is not None else None,
+        "period": period,
+        "cycle_number": cycle_number,
+        "details": details or {},
+        "created_at": utcnow(),
+    }
+    result = await db.audit_events.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return doc
+
+
+async def list_audit_events(
+    group_id=None,
+    *,
+    limit: int = 50,
+    action: Optional[str] = None,
+) -> List[dict]:
+    db = get_db()
+    query: dict = {}
+    if group_id is not None:
+        query["group_id"] = _oid(group_id)
+    if action:
+        query["action"] = action
+    cursor = db.audit_events.find(query).sort("created_at", -1).limit(limit)
+    return await cursor.to_list(length=limit)
+
+
+async def list_contributions_for_cycle(group_id, cycle_number: int) -> List[dict]:
+    """All contribution rows for a cycle — used by cycle statements."""
+    db = get_db()
+    cursor = db.equb_contributions.find(
+        {"group_id": _oid(group_id), "cycle_number": cycle_number}
+    ).sort([("period", 1), ("telegram_id", 1)])
+    return await cursor.to_list(length=5000)
+
+
+async def list_payouts_for_cycle(group_id, cycle_number: int) -> List[dict]:
+    db = get_db()
+    cursor = db.equb_payouts.find(
+        {"group_id": _oid(group_id), "cycle_number": cycle_number}
+    ).sort("period", 1)
+    return await cursor.to_list(length=500)

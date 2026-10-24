@@ -341,6 +341,9 @@ async def cmd_status(message: Message):
 
 @router.message(Command("cancelequb",))
 async def cmd_cancelequb(message: Message):
+    """Prompt for confirmation; actual cancel runs via conf:cancel callback."""
+    from core.keyboards import build_confirm_kb
+
     lang = await repo.get_chat_language(message.chat.id)
     if not await _is_admin(message.from_user.id):
         return
@@ -350,13 +353,10 @@ async def cmd_cancelequb(message: Message):
         await message.answer(t(lang, "no_open_group"))
         return
 
-    try:
-        await equb_service.cancel_group(group)
-    except EqubError as e:
-        await message.answer(_error_text(lang, e))
-        return
-
-    await message.answer(t(lang, "group_cancelled", name=group["name"]))
+    await message.answer(
+        t(lang, "confirm_cancel_prompt", name=group["name"], status=group.get("status", "")),
+        reply_markup=build_confirm_kb("cancel", group["_id"], lang),
+    )
 
 
 @router.message(Command("listequbs", "equbs"))

@@ -19,6 +19,12 @@ from services import draw_service
 
 RESTART_MODES = ("once", "auto")
 
+# Practical limits for Telegram-operated groups (manual admin review model).
+MAX_EQUB_NAME_LEN = 80
+MAX_CONTRIBUTION_AMOUNT = 10_000_000  # per member per round
+MIN_CONTRIBUTION_AMOUNT = 1
+MAX_CURRENCY_LEN = 8
+
 
 class EqubError(Exception):
     """Raised for expected, user-facing validation failures."""
@@ -31,11 +37,17 @@ def parse_newequb_args(raw: str) -> dict:
     if len(parts) < 3 or not parts[0]:
         raise EqubError("usage_newequb")
 
+    name = parts[0]
+    # Strip control characters; reject empty/overlong names.
+    name = "".join(ch for ch in name if ch.isprintable()).strip()
+    if not name or len(name) > MAX_EQUB_NAME_LEN:
+        raise EqubError("invalid_name")
+
     try:
-        amount = int(parts[1])
+        amount = int(parts[1].replace(",", "").replace(" ", ""))
     except ValueError:
         raise EqubError("usage_newequb")
-    if amount <= 0:
+    if amount < MIN_CONTRIBUTION_AMOUNT or amount > MAX_CONTRIBUTION_AMOUNT:
         raise EqubError("invalid_amount")
 
     frequency = parts[2].lower()
@@ -50,13 +62,17 @@ def parse_newequb_args(raw: str) -> dict:
     except ValueError:
         raise EqubError("invalid_frequency")
 
-    currency = parts[3] if len(parts) > 3 and parts[3] else "ETB"
+    currency = (parts[3] if len(parts) > 3 and parts[3] else "ETB").upper().strip()
+    # Letters only, short code (ETB, USD, …).
+    if not currency.isalpha() or len(currency) > MAX_CURRENCY_LEN:
+        raise EqubError("invalid_currency")
+
     restart_mode = parts[4].lower() if len(parts) > 4 and parts[4] else "once"
     if restart_mode not in RESTART_MODES:
         raise EqubError("invalid_restart_mode")
 
     return {
-        "name": parts[0],
+        "name": name,
         "amount": amount,
         "frequency": frequency,
         "interval_days": interval_days,
@@ -80,6 +96,21 @@ async def create_group(chat_id: int, name: str, amount: int, currency: str, freq
         restart_mode=restart_mode,
         created_by=creator["telegram_id"],
     )
+
+    # Re-check after insert: concurrent /newequb can also insert. Keep the
+    # oldest non-terminal group (lowest group_number) and cancel duplicates.
+    peers = await repo.list_groups(chat_id)
+    non_terminal = [g for g in peers if g.get("status") in ("open", "active")]
+    if len(non_terminal) > 1:
+        non_terminal.sort(key=lambda g: g.get("group_number", 0))
+        winner = non_terminal[0]
+        if str(winner["_id"]) != str(group["_id"]):
+            await repo.set_group_status(group["_id"], "cancelled")
+            raise EqubError("group_already_exists")
+        # We are the winner; cancel any other open/active peers we raced with.
+        for peer in non_terminal[1:]:
+            await repo.set_group_status(peer["_id"], "cancelled")
+
     # The organizer is auto-enrolled as the first member.
     await repo.add_member(group["_id"], creator["telegram_id"], creator.get("username"), creator.get("display_name"))
     return group
@@ -196,7 +227,11 @@ def _next_draw_at(interval_days: int) -> datetime:
 async def start_cycle(group: dict):
     """Locks membership, opens period 1 and schedules the first draw one
     interval out. No winner or order exists at this point — only the
-    commit hash of the round's seed, published for later verification."""
+    commit hash of the round's seed, published for later verification.
+
+    The open→active transition is conditional in the repository, so two
+    concurrent /startcycle calls cannot both succeed.
+    """
     if group["status"] != "open":
         raise EqubError("group_not_open")
 
@@ -206,8 +241,14 @@ async def start_cycle(group: dict):
 
     seed, seed_hash = draw_service.new_period_seed()
     draw_at = _next_draw_at(group["interval_days"])
-    await repo.start_group_cycle(group["_id"], seed, seed_hash, draw_at)
-    await repo.create_period_contributions(group["_id"], 1, members, group["contribution_amount"], cycle_number=1)
+    started = await repo.start_group_cycle(group["_id"], seed, seed_hash, draw_at)
+    if not started:
+        # Lost the race to another concurrent start, or status changed.
+        raise EqubError("group_not_open")
+
+    await repo.create_period_contributions(
+        group["_id"], 1, members, group["contribution_amount"], cycle_number=1,
+    )
 
     return {
         "seed_hash": seed_hash,
@@ -224,6 +265,13 @@ async def mark_payout_and_advance(group: dict, admin_id: int) -> dict:
     with restart=auto — immediately starts a brand-new cycle for the same
     members.
 
+    Concurrency / crash safety:
+    - The pending→paid transition on the payout document is atomic. A second
+      concurrent /payout sees None and raises already_paid.
+    - Period + draw schedule advance is a single conditional group update, so
+      a retry after a partial failure does not double-advance.
+    - Contribution creation is idempotent per (group, cycle, period, member).
+
     Legacy support: groups that started a fixed-order cycle before the
     lottery upgrade (they have an `order` and no `draw_at`) still advance
     sequentially so an in-flight Equb isn't broken by the upgrade."""
@@ -235,11 +283,32 @@ async def mark_payout_and_advance(group: dict, admin_id: int) -> dict:
     payout = await repo.get_payout(group["_id"], period, cycle)
     if not payout:
         raise EqubError("no_payout_record")
-    if payout["status"] == "paid":
+
+    # Atomic claim: only one concurrent caller succeeds.
+    claimed = await repo.mark_payout_paid(group["_id"], period, admin_id, cycle)
+    if not claimed:
+        # Already paid (or race lost). Surface as already_paid so the admin
+        # knows not to re-disburse; any missing advance can be recovered by
+        # a later admin action once we expose a reconcile path.
         raise EqubError("already_paid")
 
-    await repo.mark_payout_paid(group["_id"], period, admin_id, cycle)
+    payout = claimed
     await repo.mark_member_paid_out(group["_id"], payout["telegram_id"], period)
+
+    try:
+        await repo.log_audit(
+            "payout_marked_paid",
+            actor_id=admin_id,
+            group_id=group["_id"],
+            chat_id=group.get("chat_id"),
+            target_telegram_id=payout["telegram_id"],
+            payout_id=payout.get("_id"),
+            period=period,
+            cycle_number=cycle,
+            details={"amount": payout.get("amount")},
+        )
+    except Exception:
+        pass
 
     legacy = bool(group.get("order")) and not group.get("draw_at")
     if legacy:
@@ -252,8 +321,22 @@ async def mark_payout_and_advance(group: dict, admin_id: int) -> dict:
         next_period = period + 1
         seed, seed_hash = draw_service.new_period_seed()
         draw_at = _next_draw_at(group["interval_days"])
-        await repo.advance_group_period(group["_id"], next_period)
-        await repo.set_draw_schedule(group["_id"], seed, seed_hash, draw_at)
+        advanced = await repo.advance_group_period_with_draw(
+            group["_id"], period, next_period, seed, seed_hash, draw_at,
+        )
+        if advanced is None:
+            # Another worker already advanced; re-read schedule for the response.
+            group = await repo.get_group(group["_id"]) or group
+            return {
+                "completed": False,
+                "legacy": False,
+                "paid_period": period,
+                "winner_id": payout["telegram_id"],
+                "next_period": group.get("current_period", next_period),
+                "draw_at": group.get("draw_at", draw_at),
+                "seed_hash": group.get("seed_hash", seed_hash),
+                "member_count": len(members),
+            }
         await repo.create_period_contributions(
             group["_id"], next_period, members, group["contribution_amount"],
             cycle_number=group.get("cycle_number", 1),
@@ -273,7 +356,9 @@ async def mark_payout_and_advance(group: dict, admin_id: int) -> dict:
         seed, seed_hash = draw_service.new_period_seed()
         draw_at = _next_draw_at(group["interval_days"])
         cycle_number = await repo.restart_group_cycle(group["_id"], seed, seed_hash, draw_at)
-        await repo.create_period_contributions(group["_id"], 1, members, group["contribution_amount"], cycle_number=cycle_number)
+        await repo.create_period_contributions(
+            group["_id"], 1, members, group["contribution_amount"], cycle_number=cycle_number,
+        )
         return {
             "completed": True,
             "restarted": True,
@@ -286,7 +371,7 @@ async def mark_payout_and_advance(group: dict, admin_id: int) -> dict:
             "member_count": len(members),
         }
 
-    await repo.complete_group(group["_id"])
+    await repo.complete_group(group["_id"], expected_period=period)
     return {
         "completed": True,
         "restarted": False,
@@ -302,13 +387,19 @@ async def _advance_legacy(group: dict, period: int, payout: dict) -> dict:
     order = group["order"]
     next_period = period + 1
     if next_period > len(order):
-        await repo.complete_group(group["_id"])
+        await repo.complete_group(group["_id"], expected_period=period)
         return {"completed": True, "legacy": True, "paid_period": period, "winner_id": payout["telegram_id"]}
 
     members = await repo.list_members(group["_id"], active_only=True)
     await repo.create_period_contributions(group["_id"], next_period, members, group["contribution_amount"])
     next_recipient = order[next_period - 1]
-    await repo.create_payout_record(group["_id"], next_period, next_recipient, group["contribution_amount"] * len(members))
+    # Only create the next payout if one does not already exist (retry-safe).
+    existing = await repo.get_payout(group["_id"], next_period)
+    if not existing:
+        await repo.create_payout_record(
+            group["_id"], next_period, next_recipient,
+            group["contribution_amount"] * len(members),
+        )
     await repo.advance_group_period(group["_id"], next_period)
     return {
         "completed": False,
@@ -320,10 +411,179 @@ async def _advance_legacy(group: dict, period: int, payout: dict) -> dict:
     }
 
 
-async def cancel_group(group: dict) -> None:
+async def cancel_group(group: dict, actor_id: int | None = None) -> dict:
+    """Cancel an open or active Equb with a clear financial freeze.
+
+    Policy (manual-review model, no custody of funds):
+    - Group status → cancelled (terminal).
+    - Open obligations (pending / awaiting_review / rejected) are marked
+      `cancelled` so they no longer appear in /contribute.
+    - Verified contributions and existing payout records are left intact as
+      the historical ledger (admins settle any unpaid drawn winner offline).
+    - Returns a summary so the group chat can see outstanding obligations.
+    """
     if group["status"] in ("completed", "cancelled"):
         raise EqubError("group_already_terminal")
-    await repo.set_group_status(group["_id"], "cancelled")
+
+    cycle = group.get("cycle_number", 1)
+    period = group.get("current_period", 0)
+
+    open_contribs = 0
+    verified_count = 0
+    unpaid_winner = None
+    if group["status"] == "active":
+        contribs = await repo.list_contributions_for_cycle(group["_id"], cycle)
+        for c in contribs:
+            st = c.get("status")
+            if st in ("pending", "awaiting_review", "rejected"):
+                open_contribs += 1
+            elif st == "verified":
+                verified_count += 1
+        payout = await repo.get_payout(group["_id"], period, cycle)
+        if payout and payout.get("status") != "paid":
+            unpaid_winner = {
+                "telegram_id": payout["telegram_id"],
+                "amount": payout.get("amount"),
+                "period": period,
+            }
+
+    await repo.cancel_open_contributions(group["_id"], cycle)
+    await repo.set_group_status(group["_id"], "cancelled", cancelled_at=repo.utcnow())
+
+    try:
+        await repo.log_audit(
+            "group_cancelled",
+            actor_id=actor_id,
+            group_id=group["_id"],
+            chat_id=group.get("chat_id"),
+            period=period,
+            cycle_number=cycle,
+            details={
+                "open_contributions_cancelled": open_contribs,
+                "verified_left_intact": verified_count,
+                "unpaid_winner": unpaid_winner,
+            },
+        )
+    except Exception:
+        pass
+
+    return {
+        "name": group.get("name"),
+        "cycle": cycle,
+        "period": period,
+        "open_contributions_cancelled": open_contribs,
+        "verified_left_intact": verified_count,
+        "unpaid_winner": unpaid_winner,
+    }
+
+
+async def reconcile_stuck_payout(group: dict, admin_id: int) -> dict:
+    """Recover when a payout is already `paid` but the cycle did not advance
+    (crash between mark_payout_paid and period advance).
+
+    Preconditions:
+    - group is active
+    - current period's payout exists and status is `paid`
+    - group is still on that period (advance did not complete)
+
+    Then continues the same advance path as a successful /payout without
+    re-marking the payout document.
+    """
+    if group["status"] != "active":
+        raise EqubError("group_not_active")
+
+    period = group["current_period"]
+    cycle = group.get("cycle_number", 1)
+    payout = await repo.get_payout(group["_id"], period, cycle)
+    if not payout:
+        raise EqubError("no_payout_record")
+    if payout.get("status") != "paid":
+        # Normal path: admin should use /payout, not /reconcile.
+        raise EqubError("payout_not_paid_yet")
+
+    await repo.mark_member_paid_out(group["_id"], payout["telegram_id"], period)
+
+    legacy = bool(group.get("order")) and not group.get("draw_at")
+    if legacy:
+        result = await _advance_legacy(group, period, payout)
+        result["reconciled"] = True
+        return result
+
+    unreceived = await repo.list_unreceived_members(group["_id"])
+    members = await repo.list_members(group["_id"], active_only=True)
+
+    if unreceived:
+        next_period = period + 1
+        seed, seed_hash = draw_service.new_period_seed()
+        draw_at = _next_draw_at(group["interval_days"])
+        advanced = await repo.advance_group_period_with_draw(
+            group["_id"], period, next_period, seed, seed_hash, draw_at,
+        )
+        if advanced is None:
+            # Period already moved — nothing left to fix.
+            raise EqubError("nothing_to_reconcile")
+        await repo.create_period_contributions(
+            group["_id"], next_period, members, group["contribution_amount"],
+            cycle_number=cycle,
+        )
+        result = {
+            "completed": False,
+            "legacy": False,
+            "paid_period": period,
+            "winner_id": payout["telegram_id"],
+            "next_period": next_period,
+            "draw_at": draw_at,
+            "seed_hash": seed_hash,
+            "member_count": len(members),
+            "reconciled": True,
+        }
+    elif group.get("restart_mode") == "auto" and len(members) >= 2:
+        seed, seed_hash = draw_service.new_period_seed()
+        draw_at = _next_draw_at(group["interval_days"])
+        cycle_number = await repo.restart_group_cycle(group["_id"], seed, seed_hash, draw_at)
+        await repo.create_period_contributions(
+            group["_id"], 1, members, group["contribution_amount"], cycle_number=cycle_number,
+        )
+        result = {
+            "completed": True,
+            "restarted": True,
+            "legacy": False,
+            "paid_period": period,
+            "winner_id": payout["telegram_id"],
+            "cycle_number": cycle_number,
+            "draw_at": draw_at,
+            "seed_hash": seed_hash,
+            "member_count": len(members),
+            "reconciled": True,
+        }
+    else:
+        completed = await repo.complete_group(group["_id"], expected_period=period)
+        if not completed:
+            raise EqubError("nothing_to_reconcile")
+        result = {
+            "completed": True,
+            "restarted": False,
+            "legacy": False,
+            "paid_period": period,
+            "winner_id": payout["telegram_id"],
+            "reconciled": True,
+        }
+
+    try:
+        await repo.log_audit(
+            "payout_reconciled",
+            actor_id=admin_id,
+            group_id=group["_id"],
+            chat_id=group.get("chat_id"),
+            target_telegram_id=payout["telegram_id"],
+            period=period,
+            cycle_number=cycle,
+            details={"completed": result.get("completed"), "restarted": result.get("restarted")},
+        )
+    except Exception:
+        pass
+
+    return result
 
 
 def period_progress(group: dict, contributions: list[dict]) -> tuple[int, int]:

@@ -2,7 +2,7 @@ import hashlib
 
 import pytest
 
-from services.draw_service import new_period_seed, pick_winner
+from services.draw_service import new_period_seed, pick_winner, verify_payout_record
 
 
 class TestNewPeriodSeed:
@@ -44,3 +44,47 @@ class TestPickWinner:
     def test_empty_raises(self):
         with pytest.raises(ValueError):
             pick_winner("any-seed", [])
+
+
+class TestVerifyPayoutRecord:
+    def test_ok_when_consistent(self):
+        seed, seed_hash = new_period_seed()
+        eligible = [10, 20, 30]
+        winner = pick_winner(seed, eligible)
+        result = verify_payout_record({
+            "seed": seed,
+            "seed_hash": seed_hash,
+            "eligible_ids": eligible,
+            "telegram_id": winner,
+        })
+        assert result["ok"] is True
+        assert result["seed_hash_match"] is True
+        assert result["winner_match"] is True
+        assert result["recomputed_winner"] == winner
+
+    def test_detects_hash_tamper(self):
+        seed, _ = new_period_seed()
+        eligible = [1, 2, 3]
+        winner = pick_winner(seed, eligible)
+        result = verify_payout_record({
+            "seed": seed,
+            "seed_hash": "0" * 64,
+            "eligible_ids": eligible,
+            "telegram_id": winner,
+        })
+        assert result["ok"] is False
+        assert "seed_hash_mismatch" in result["errors"]
+
+    def test_detects_winner_tamper(self):
+        seed, seed_hash = new_period_seed()
+        eligible = [1, 2, 3]
+        winner = pick_winner(seed, eligible)
+        other = next(i for i in eligible if i != winner)
+        result = verify_payout_record({
+            "seed": seed,
+            "seed_hash": seed_hash,
+            "eligible_ids": eligible,
+            "telegram_id": other,
+        })
+        assert result["ok"] is False
+        assert "winner_mismatch" in result["errors"]

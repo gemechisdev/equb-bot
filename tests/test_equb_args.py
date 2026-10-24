@@ -47,9 +47,15 @@ class TestParseNewequbArgs:
             ("Family | 500 | yearly", "invalid_frequency"),
             ("Family | 500 | 0d", "invalid_frequency"),
             ("Family | 500 | weekly | ETB | sometimes", "invalid_restart_mode"),
+            ("Family | 500 | weekly | ETB123", "invalid_currency"),
+            ("Family | 999999999 | weekly", "invalid_amount"),
         ],
     )
     def test_validation_errors(self, raw, code):
         with pytest.raises(EqubError) as e:
             parse_newequb_args(raw)
         assert e.value.args[0] == code
+
+    def test_currency_normalized_to_upper(self):
+        args = parse_newequb_args("Family | 100 | weekly | etb")
+        assert args["currency"] == "ETB"

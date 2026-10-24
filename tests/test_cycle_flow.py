@@ -59,8 +59,11 @@ class MemoryRepo:
 
     # --- groups ---
     async def create_group(self, chat_id, name, contribution_amount, currency, frequency, interval_days, restart_mode, created_by):
+        existing = [g for g in self.groups.values() if g["chat_id"] == chat_id]
+        group_number = max((g.get("group_number", 0) for g in existing), default=0) + 1
         g = {
             "_id": self._id(), "chat_id": chat_id, "name": name,
+            "group_number": group_number,
             "contribution_amount": contribution_amount, "currency": currency,
             "frequency": frequency, "interval_days": interval_days,
             "restart_mode": restart_mode, "status": "open",
@@ -82,10 +85,21 @@ class MemoryRepo:
                 return g
         return None
 
+    async def list_groups(self, chat_id):
+        return [g for g in self.groups.values() if g["chat_id"] == chat_id]
+
+    async def set_group_status(self, gid, status, **extra):
+        g = self.groups[gid]
+        g["status"] = status
+        g.update(extra)
+
     async def start_group_cycle(self, gid, seed, seed_hash, draw_at):
         g = self.groups[gid]
+        if g.get("status") != "open":
+            return None
         g.update(status="active", current_period=1, cycle_number=1,
                  seed=seed, seed_hash=seed_hash, draw_at=draw_at, draw_state="scheduled")
+        return g
 
     async def restart_group_cycle(self, gid, seed, seed_hash, draw_at):
         g = self.groups[gid]
@@ -108,7 +122,9 @@ class MemoryRepo:
                  overdue_eligible_notified=False, pre_draw_reminder_sent=False)
 
     async def set_group_drawn(self, gid):
-        self.groups[gid]["draw_state"] = "drawn"
+        g = self.groups[gid]
+        g["draw_state"] = "drawn"
+        g["seed"] = None  # cleared after reveal; lives on the payout record
 
     async def set_pinned_message_id(self, gid, message_id):
         self.groups[gid]["pinned_message_id"] = message_id
@@ -133,8 +149,29 @@ class MemoryRepo:
     async def advance_group_period(self, gid, period):
         self.groups[gid]["current_period"] = period
 
-    async def complete_group(self, gid):
-        self.groups[gid]["status"] = "completed"
+    async def advance_group_period_with_draw(self, gid, expected_period, new_period, seed, seed_hash, draw_at):
+        g = self.groups[gid]
+        if g.get("status") != "active" or g.get("current_period") != expected_period:
+            return None
+        g["current_period"] = new_period
+        g["seed"] = seed
+        g["seed_hash"] = seed_hash
+        g["draw_at"] = draw_at
+        g["draw_state"] = "scheduled"
+        g["draw_started_at"] = None
+        g["overdue_notified"] = False
+        g["overdue_eligible_notified"] = False
+        g["pre_draw_reminder_sent"] = False
+        return g
+
+    async def complete_group(self, gid, expected_period=None):
+        g = self.groups[gid]
+        if g.get("status") != "active":
+            return None
+        if expected_period is not None and g.get("current_period") != expected_period:
+            return None
+        g["status"] = "completed"
+        return g
 
     # --- members ---
     async def add_member(self, gid, telegram_id, username, display_name, joined_period=None):
@@ -183,6 +220,14 @@ class MemoryRepo:
 
     async def create_period_contributions(self, gid, period, members, amount, cycle_number=None):
         for m in members:
+            exists = any(
+                c["group_id"] == gid and c["period"] == period
+                and c["telegram_id"] == m["telegram_id"]
+                and (cycle_number is None or c.get("cycle_number") == cycle_number)
+                for c in self.contributions
+            )
+            if exists:
+                continue
             self.contributions.append({
                 "group_id": gid, "cycle_number": cycle_number, "period": period,
                 "telegram_id": m["telegram_id"], "status": "pending", "amount": amount,
@@ -229,10 +274,15 @@ class MemoryRepo:
         return p
 
     async def mark_payout_paid(self, gid, period, admin_id, cycle_number=None):
-        p = next(p for p in self.payouts
-                 if p["group_id"] == gid and p["period"] == period
-                 and (cycle_number is None or p.get("cycle_number") == cycle_number))
+        p = next((p for p in self.payouts
+                  if p["group_id"] == gid and p["period"] == period
+                  and p.get("status") == "pending"
+                  and (cycle_number is None or p.get("cycle_number") == cycle_number)), None)
+        if not p:
+            return None
         p["status"] = "paid"
+        p["paid_by"] = admin_id
+        return p
 
     # --- misc ---
     async def get_chat_language(self, chat_id):

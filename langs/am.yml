@@ -14,43 +14,6 @@ start_welcome: |
   አሸናፊው ማን እንደሚሆን ማንም አያውቅም — አድሚኖችም እስከ ሶስቱ ጊዜ ድረስ።
 
   ለመጀመር ቦቱን ወደ ቡድናችሁ ጨምሩ፣ ከዚያ /help ተይ።
-help_text: |
-  <b>ማዋቀር (በቡድን ቻት፣ አድሚን ብቻ)</b>
-  /newequb ስም | መጠን | ድግግሞሽ | [ገንዘብ] | [እንደገና] — እቁብ ይፍጠሩ። ድግግሞሽ፦ weekly፣ biweekly፣ monthly ወይም በየ N ቀኑ (ለምሳሌ <code>3d</code>)። እንደገና፦ <code>once</code> (ነባሪ) ወይም <code>auto</code> — ዙሩ ሲጠናቅ በራሱ አዲስ ዙር ይጀምራል።
-  ምሳሌ፦ <code>/newequb የቤተሰብ እቁብ | 500 | weekly | ETB | auto</code>
-
-  <b>መቀላቀል (በቡድን ቻት)</b>
-  /joinequb — እቁቡን ይቀላቀሉ። ዙሩ ከጀምሮ ንቁ ከሆነ መሃል ላይ ይቀላቀላሉ፦ እስኪሸነፉ ድረስ ከጀምሩ በኋላ ያሉትን ሁሉ ዙሮች መክፈል ይኖርብዎታል። የተሰቀለው መልእክት ላይ 💰 አዋጋ እና ➕ ተቀላቀል ቁልፎች አሉ።
-  /addmember @user | user_id | reply — አድሚን የሚፈልገውን ሰው ይጨምራል (ተመሳሳይ back-pay ህግ)
-  /leaveequb — ዙሩ ከመጀመሩ በፊት ይለቁ
-  /members — አሁን ያሉ አባላትን ይዘርዝሩ
-  /removemember — አድሚን አባል ያስወግዳል
-
-  <b>ዙሩን መምራት (በቡድን ቻት፣ አድሚን)</b>
-  /startcycle — የአባላት መውጫን ይዝጋ፣ ዙር 1 ይክፈት፣ የመጀመሪያውን የሶስት ቀንና ሰዓት አስነብ።
-  /status — ቀጣዩ የሶስት ጊዜ፣ የከፈሉ፣ ያሸነፉ (የወጣ አሸናፊ ብቻ) — የሚወጣው አሸናፊ አይታይም፤ ማንም አያውቀውም።
-  /drawnow — ከከፈሉ አባላት መካከል አሁኑኑ ሶስት ይልቀቁ
-  /postpone ሰዓታት — የቆየ ሶስትን ያራዝሙ (ለምሳሌ /postpone 24)
-  /payout — አሸናፊው ገንዘቡን እንደተቀበለ ያረጋግጡ፤ ቀጣዩን ዙር ይከፍታል
-  /recipient — በዚህ ዙር የተሸነፈው (ወይም ሶስቱ ሲቀርብ)
-  /remind — በዚህ ዙር ያልከፈሉትን በDM ያስታውሱ
-  /history — የዚህ እቁብ ሙሉ የክፍያ ታሪክ
-  /cancelequb — ቡድኑን ይሰርዙ
-  /listequbs — በዚህ ቻት የተካሄዱ ሁሉንም እቁቦች ይዘርዝሩ
-
-  <b>ሶስቶቹ እንዴት እንደሚሰሩ</b>
-  በተቀመጠው የሶስት ጊዜ፣ ቦቱ ከከፈሉ እና ከተረጋገጡ አባላት መካከል በዕጣ አሸናፊውን ይለቀቃል — ክፍያ ያልተረጋገጠላቸው ከዚያ ዙር ሶስት ውጭ ይሆናሉ። ትክክለኛው የሶስት ቀንና ሰዓት ሁልጊዜ አስነብ ይሆናል። እያንዳንዱ ሶስት ማስረጃዊ ነው፦ የseed hash ስሙን ሲከፈት ይታተማል፣ seed በውጤቱ ውስጥ ይገለጻል።
-
-  <b>መዋጮ መክፈል (በግል ቻት፣ ማንም)</b>
-  /contribute — የሚገባዎትን ሁሉ (ዙር በዙር፣ back-payን ጨምሮ) እና እንዴት እንደሚከፍሉ ይመልከቱ
-  ወይም በቡድናችሁ በተሰቀለው መልእክት ላይ ያለውን 💰 አዋጋ ቁልፍ ይጫኑ — ወደዚህ ቻት ይከፍትልዎታል።
-  ከከፈሉ በኋላ የክፍያ ማረጋገጫዎን (ስክሪንሾት ወይም የግብይት ቁጥር) እዚህ ይላኩ — ወደ የመጀመሪያው ያልተከፈለ ዙርዎ በራሱ ይመደባል። ሶስቱ ከመታታቱ በፊት እንዲረጋገጥ በቂ ጊዜ ቀድመው ይላኩ!
-
-  <b>የአድሚን አስተዳደር</b>
-  /addadmin, /deladmin, /listadmins
-  /addpayment, /editpayment, /delpayment, /togglepayment, /listpayments
-
-  /language — የዚህን ቻት ቋንቋ ይቀይሩ
 only_admin_can_change_language: "ቋንቋን መቀየር የሚችለው አድሚን ብቻ ነው።"
 choose_language: "ቋንቋ ይምረጡ፦"
 language_set_confirmation: "✅ ቋንቋ ተቀይሯል።"
@@ -162,6 +125,25 @@ draw_result_winner: "🎊 {who} <b>{amount} {currency}</b> አሸንፏል!"
 draw_result_eligible_count: "ከሶስቱ በፊት ክፍያቸው የተረጋገጠላቸው {count} አባላት መካከል ተወጥቷል።"
 payout_admin_note: "👩‍💼 አድሚን፦ አሸናፊው ገንዘቡን በእውነት እንደወሰደ በ/payout ያረጋግጡ — ቀጣዩን ዙር ይከፍታል።"
 draw_verification: "🔍 <b>በራስዎ ያረጋግጡ፦</b> seed <code>{seed}</code> (sha256 = ዙሩ ሲከፈት የታተመው hash <code>{hash}</code>)። አሸናፊ = sorted([{ids}]) በRandom(seed) የተመረጠ።"
+usage_verify: "አጠቃቀም፦ /verify — የቅርብ ጊዜ ሶስት\n/verify &lt;ዙር&gt; — የአሁኑ ዑደት ያ ዙር\n/verify &lt;ዑደት&gt; &lt;ዙር&gt;"
+verify_no_draw: "ለዚህ ቡድን ገና ሶስት አልተመዘገበም።"
+verify_no_draw_period: "ለዑደት {cycle} ዙር {period} ሶስት አልተገኘም።"
+verify_ok: |
+  ✅ <b>ሶስቱ ተረጋግጧል</b> — «{name}» ዑደት {cycle}፣ ዙር {period}
+  አሸናፊ: {who}
+  Seed: <code>{seed}</code>
+  Hash: <code>{hash}</code>
+  ብቁ: [{ids}]
+  እንደገና የተሰላው ውጤት ከተመዘገበው አሸናፊ እና ከhash ጋር ይስማማል።
+verify_fail: |
+  ❌ <b>ማረጋገጫ አልተሳካም</b> — «{name}» ዑደት {cycle}፣ ዙር {period}
+  የተመዘገበ አሸናፊ: {who}
+  ችግሮች: {errors}
+  Seed: <code>{seed}</code>
+  Hash: <code>{hash}</code>
+  የሚጠበቀው hash: <code>{expected_hash}</code>
+  እንደገና የተሰላ አሸናፊ: {recomputed}
+  ብቁ: [{ids}]
 draw_overdue_group: "⏰ የ«{name}» (ዙር {period}) የሶስት ጊዜ አልፎታል፣ ግን የተረጋገጠ ክፍያ የለም። ክፍያዎች ከተረጋገጡ በኋላ አድሚን /drawnow ወይም /postpone 24 ይጠቀም።"
 draw_overdue_admin_dm: "⏰ «{name}» (ዙር {period})፦ የሶስት ጊዜው አልፏል፣ ክፍያም የለም። ማረጋገጫዎችን በ/pending ያረጋግጡ ከዚያ /drawnow — ወይም በቡድኑ ውስጥ /postpone 24።"
 overdue_eligible_admin_dm: "🔔 «{name}» (ዙር {period})፦ {count} አባል(ዎች) ከጊዜው በኋላ ክፍያቸው ተረጋግጧል። ለመስራት /drawnow፣ ወይም ሌሎች ጊዜ እንዲኖራቸው /postpone 24 በቡድኑ ይጠቀሙ።"
@@ -196,6 +178,7 @@ contribute_header: "💰 {count} ያልተከፈሉ መዋጮ(ዎች) አሉዎ�
 contribute_pending_line: "• «{name}» — ዙር {period}: {amount} {currency} ({state}) — ሶስት: {when}"
 state_to_pay: "አሁን ይክፈሉ 💰"
 state_awaiting_review: "ለግምገማ በመጠበቅ ላይ ⏳"
+state_rejected: "ውድቅ — እንደገና ይላኩ ❌"
 payment_methods_header: "የክፍያ መንገዶች:"
 contribute_send_proof: "ከከፈሉ በኋላ ስክሪንሾቱን ወይም የግብይቱን ቁጥር እዚህ ይላኩ — ወደ መጀመሪያው ያልተከፈለ ዙርዎ በራሱ ይመደባል።"
 proof_received: "✅ ደረሰኝ ደርሶኛል — የ«{name}» ማረጋገጫዎ ለአድሚኖች ተልኳል።"
@@ -205,6 +188,8 @@ pending_review_line: "{who}\nዙር {period} — {amount} {currency}"
 pending_review_proof_text: "ማረጋገጫ: {proof}"
 review_result_verified: "✅ ጸድቋል"
 review_result_rejected: "❌ ውድቅ ተደርጓል"
+review_already_processed: "ይህ መዋጮ ቀድሞውኑ ተገምግሟል።"
+review_invalid_action: "ልክ ያልሆነ የግምገማ እርምጃ።"
 dm_contribution_verified: "✅ የ«{name}» (ዙር {period}፣ {amount} {currency}) መዋጮዎ ጸድቋል — በዚህ ዙር ሶስት ውስጥ አሉ።"
 dm_contribution_rejected: "❌ የ«{name}» (ዙር {period}፣ {amount} {currency}) የክፍያ ማረጋገጫዎ ውድቅ ተደርጓል። ከአድሚኑ ጋር ይወያዩና በ/contribute ደግመው ይላኩ።"
 

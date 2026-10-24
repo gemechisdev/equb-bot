@@ -47,6 +47,57 @@ def pick_winner(seed: str, eligible_ids: list[int]) -> int:
     return ids[rng.randrange(len(ids))]
 
 
+def verify_payout_record(payout: dict) -> dict:
+    """Re-run the lottery math against an immutable payout record.
+
+    Returns:
+      ok, seed_hash_match, recomputed_winner, stored_winner, winner_match,
+      expected_hash, stored_hash, eligible_ids, errors
+    """
+    errors: list[str] = []
+    seed = payout.get("seed") or ""
+    stored_hash = payout.get("seed_hash") or ""
+    eligible = list(payout.get("eligible_ids") or [])
+    stored_winner = payout.get("telegram_id")
+
+    if not seed:
+        errors.append("missing_seed")
+    if not stored_hash:
+        errors.append("missing_seed_hash")
+    if not eligible:
+        errors.append("missing_eligible_ids")
+    if stored_winner is None:
+        errors.append("missing_winner")
+
+    expected_hash = hashlib.sha256(seed.encode()).hexdigest() if seed else ""
+    seed_hash_match = bool(seed) and expected_hash == stored_hash
+    if seed and stored_hash and not seed_hash_match:
+        errors.append("seed_hash_mismatch")
+
+    recomputed_winner = None
+    winner_match = False
+    if seed and eligible:
+        try:
+            recomputed_winner = pick_winner(seed, eligible)
+            winner_match = recomputed_winner == stored_winner
+            if not winner_match:
+                errors.append("winner_mismatch")
+        except ValueError:
+            errors.append("pick_failed")
+
+    return {
+        "ok": not errors,
+        "seed_hash_match": seed_hash_match,
+        "recomputed_winner": recomputed_winner,
+        "stored_winner": stored_winner,
+        "winner_match": winner_match,
+        "expected_hash": expected_hash,
+        "stored_hash": stored_hash,
+        "eligible_ids": sorted(eligible),
+        "errors": errors,
+    }
+
+
 async def compute_eligible_ids(group: dict, period: int) -> list[int]:
     """Active members who verified their payment this round (in this cycle)
     and haven't received their pool yet — the only people in the draw.
@@ -115,11 +166,31 @@ async def run_draw(bot, group: dict) -> dict:
     )
     await repo.set_group_drawn(group_id)
 
+    try:
+        await repo.log_audit(
+            "draw_completed",
+            group_id=group_id,
+            chat_id=chat_id,
+            target_telegram_id=winner_id,
+            period=period,
+            cycle_number=group.get("cycle_number", 1),
+            details={
+                "pool": pool,
+                "eligible_count": len(eligible_ids),
+                "seed_hash": seed_hash,
+            },
+        )
+    except Exception:
+        pass
+
     text = build_draw_result_text(group, period, winner, winner_id, pool, lang, seed, seed_hash, eligible_ids)
     await announce_and_pin(bot, chat_id, group_id, text)
 
+    # Celebrate in the winner's private chat (message effects work in DMs).
     try:
-        await bot.send_message(
+        from core.effects import send_with_optional_effect
+        await send_with_optional_effect(
+            bot,
             winner_id,
             t(lang, "dm_you_won", name=group["name"], period=period, amount=pool, currency=group["currency"]),
         )

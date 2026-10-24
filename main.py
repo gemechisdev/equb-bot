@@ -41,6 +41,11 @@ async def _check_db_or_exit():
         await ping_db()
         logger.info("MongoDB connection OK.")
         try:
+            await repo.ensure_indexes()
+            logger.info("MongoDB indexes ensured.")
+        except Exception:
+            logger.warning("Could not ensure MongoDB indexes (may need manual migration).")
+        try:
             await repo.ensure_admins_from_env()
         except Exception:
             logger.warning("Could not seed admins from env into DB.")
@@ -66,6 +71,11 @@ def run_polling():
         site = web.TCPSite(runner, host="0.0.0.0", port=PORT)
         await site.start()
         await bot.delete_webhook(drop_pending_updates=True)
+        try:
+            from core.bot_commands import register_bot_commands
+            await register_bot_commands(bot)
+        except Exception:
+            logger.exception("Bot command registration failed")
         logger.info("Starting in POLLING mode with embedded web server...")
         await dp.start_polling(bot)
 

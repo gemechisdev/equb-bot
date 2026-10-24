@@ -44,9 +44,15 @@ PORT = int(os.environ.get("PORT", 8080))
 # override it.
 DEFAULT_CURRENCY = os.environ.get("DEFAULT_CURRENCY", "ETB")
 
-# Optional Telegram message effect id applied to payout announcements.
-# Defaults to Telegram's built-in celebratory effect when not set.
-PAYOUT_MESSAGE_EFFECT_ID = os.environ.get("PAYOUT_MESSAGE_EFFECT_ID", "5298766204649872471").strip()
+# Optional Telegram message effect id for *winner* notifications (private DMs).
+# Bot API treats this as an Integer and applies effects reliably in private
+# chats; groups often ignore/reject them. Set empty to disable.
+# Default id is a celebratory effect used by Telegram clients.
+_raw_effect = os.environ.get("PAYOUT_MESSAGE_EFFECT_ID", "5159385139981059269").strip()
+try:
+    PAYOUT_MESSAGE_EFFECT_ID = int(_raw_effect) if _raw_effect else None
+except ValueError:
+    PAYOUT_MESSAGE_EFFECT_ID = None
 
 # IANA timezone used to DISPLAY draw dates/times (default: Ethiopian time).
 # All datetimes are stored and computed in UTC internally; this only affects

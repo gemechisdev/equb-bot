@@ -32,7 +32,12 @@ async def send_contribute_instructions(bot, chat_id: int, lang: str, telegram_id
         if g is None:
             g = await repo.get_group(c["group_id"])
             groups_by_id[str(c["group_id"])] = g
-        state = t(lang, "state_awaiting_review") if c["status"] == "awaiting_review" else t(lang, "state_to_pay")
+        if c["status"] == "awaiting_review":
+            state = t(lang, "state_awaiting_review")
+        elif c["status"] == "rejected":
+            state = t(lang, "state_rejected")
+        else:
+            state = t(lang, "state_to_pay")
         when = format_draw_time(g["draw_at"]) if g and g.get("draw_at") else ""
         lines.append(t(
             lang, "contribute_pending_line",
@@ -77,7 +82,11 @@ async def catch_all_private_proof(message: Message):
         await message.answer(t(lang, "no_pending_contribution"))
         return
 
-    contribution = next((c for c in pendings if c["status"] == "pending"), None)
+    # Oldest open debt first: unpaid (`pending`) or previously rejected.
+    contribution = next(
+        (c for c in pendings if c["status"] in ("pending", "rejected")),
+        None,
+    )
     if contribution is None:  # everything is awaiting review already
         group = await repo.get_group(pendings[0]["group_id"])
         await message.answer(t(lang, "contribution_already_submitted", name=group["name"] if group else "?"))
@@ -90,8 +99,13 @@ async def catch_all_private_proof(message: Message):
     else:
         proof = {"type": "text", "content": message.text}
 
-    await repo.submit_contribution_proof(contribution["_id"], proof)
-    remaining = sum(1 for c in pendings if c["status"] == "pending") - 1
+    updated = await repo.submit_contribution_proof(contribution["_id"], proof)
+    if not updated:
+        # Race: another concurrent submission, or status changed under us.
+        await message.answer(t(lang, "contribution_already_submitted", name=group["name"] if group else "?"))
+        return
+
+    remaining = sum(1 for c in pendings if c["status"] in ("pending", "rejected")) - 1
     if remaining > 0:
         await message.answer(t(lang, "proof_received_with_remaining", name=group["name"] if group else "?", remaining=remaining))
     else:
@@ -109,7 +123,10 @@ async def cmd_pending(message: Message):
         await message.answer(t(lang, "no_active_group"))
         return
 
-    pending = await repo.get_awaiting_review_contributions(group["_id"])
+    # Scope reviews to the active cycle so old-cycle submissions never reappear.
+    pending = await repo.get_awaiting_review_contributions(
+        group["_id"], cycle_number=group.get("cycle_number", 1)
+    )
     if not pending:
         await message.answer(t(lang, "no_pending_reviews"))
         return
@@ -131,26 +148,61 @@ async def cb_review_contribution(callback: CallbackQuery):
         await callback.answer(t(chat_lang, "admins_only"), show_alert=True)
         return
 
-    _, action, contribution_id = callback.data.split(":", 2)
+    parts = callback.data.split(":", 2)
+    if len(parts) != 3 or parts[1] not in ("approve", "reject"):
+        await callback.answer(t(chat_lang, "review_invalid_action"), show_alert=True)
+        return
+
+    _, action, contribution_id = parts
     status = "verified" if action == "approve" else "rejected"
 
     contribution = await repo.review_contribution(contribution_id, status, callback.from_user.id)
     if not contribution:
-        await callback.answer()
+        # Stale button or double-click: already reviewed (or missing).
+        # Strip the keyboard so the admin cannot click again.
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        await callback.answer(t(chat_lang, "review_already_processed"), show_alert=True)
         return
 
     group = await repo.get_group(contribution["group_id"])
+    try:
+        await repo.log_audit(
+            f"contribution_{status}",
+            actor_id=callback.from_user.id,
+            group_id=contribution["group_id"],
+            chat_id=group["chat_id"] if group else None,
+            target_telegram_id=contribution["telegram_id"],
+            contribution_id=contribution["_id"],
+            period=contribution.get("period"),
+            cycle_number=contribution.get("cycle_number"),
+            details={"amount": contribution.get("amount")},
+        )
+    except Exception:
+        pass
+
     member_lang = await repo.get_chat_language(contribution["telegram_id"])
+    result_line = t(chat_lang, f"review_result_{status}")
 
     try:
         if callback.message.photo:
             await callback.message.edit_caption(
-                caption=callback.message.caption + "\n\n" + t(chat_lang, f"review_result_{status}")
+                caption=(callback.message.caption or "") + "\n\n" + result_line,
+                reply_markup=None,
             )
         else:
-            await callback.message.edit_text(callback.message.text + "\n\n" + t(chat_lang, f"review_result_{status}"))
+            await callback.message.edit_text(
+                (callback.message.text or "") + "\n\n" + result_line,
+                reply_markup=None,
+            )
     except Exception:
-        pass
+        # Message may already have been edited; still try to drop the buttons.
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except Exception:
+            pass
 
     try:
         await callback.bot.send_message(

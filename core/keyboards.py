@@ -49,6 +49,24 @@ def build_review_kb(contribution_id) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def build_confirm_kb(action: str, group_id, lang: str) -> InlineKeyboardMarkup:
+    """Confirm/Cancel for irreversible admin actions (payout, cancel group).
+
+    callback_data: conf:{action}:{group_id} | conf:abort:{group_id}
+    """
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text=t(lang, "confirm_yes"),
+        callback_data=f"conf:{action}:{group_id}",
+    )
+    builder.button(
+        text=t(lang, "confirm_no"),
+        callback_data=f"conf:abort:{group_id}",
+    )
+    builder.adjust(2)
+    return builder.as_markup()
+
+
 def build_language_kb() -> InlineKeyboardMarkup:
     """Language names are shown in their own language regardless of the
     chat's current language, so a user can recognize their language even if

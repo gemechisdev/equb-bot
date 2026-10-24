@@ -16,34 +16,50 @@ logger = logging.getLogger("digital-equb.webserver")
 # scheduler loop were somehow not running.
 WAKE_DUE_CHECK_MIN_INTERVAL_SECONDS = 10
 _last_wake_due_check = 0.0
+# Wall-clock timestamp of the last successful due-draw sweep (any path).
+_last_due_draws_ok_at: float | None = None
 
 
 async def _maybe_run_due_draws(bot) -> None:
-    global _last_wake_due_check
+    global _last_wake_due_check, _last_due_draws_ok_at
     now = time.monotonic()
     if now - _last_wake_due_check < WAKE_DUE_CHECK_MIN_INTERVAL_SECONDS:
         return
     _last_wake_due_check = now
     try:
         executed = await scheduler_service.run_due_draws(bot)
+        _last_due_draws_ok_at = time.time()
         if executed:
             logger.info("Executed %d due draw(s) triggered by a health/wake request.", executed)
     except Exception:
         logger.exception("Due-draw check on health/wake endpoint failed")
 
 
+async def _run_due_draws_forced(bot) -> dict:
+    """Always run the due-draw sweep (no throttle). Used by /run-draws cron."""
+    global _last_due_draws_ok_at
+    executed = await scheduler_service.run_due_draws(bot)
+    _last_due_draws_ok_at = time.time()
+    return {"executed": executed, "last_ok_at": _last_due_draws_ok_at}
+
+
 async def health(request: web.Request) -> web.Response:
     bot = request.app.get("bot")
     if bot:
         await _maybe_run_due_draws(bot)
-    return web.json_response({"status": "ok", "service": "digital-equb-bot"})
+    body = {
+        "status": "ok",
+        "service": "digital-equb-bot",
+        "last_due_draws_ok_at": _last_due_draws_ok_at,
+    }
+    return web.json_response(body)
 
 
 async def ping(request: web.Request) -> web.Response:
     bot = request.app.get("bot")
     if bot:
         await _maybe_run_due_draws(bot)
-    return web.json_response({"pong": True})
+    return web.json_response({"pong": True, "last_due_draws_ok_at": _last_due_draws_ok_at})
 
 
 async def _on_startup(app: web.Application):
@@ -55,6 +71,13 @@ async def _on_startup(app: web.Application):
     if not app.get("scheduler_started"):
         app["scheduler_started"] = True
         app["scheduler_task"] = scheduler_service.start_scheduler(bot)
+
+    # Populate the Telegram "/" command menu (member + [admin] commands).
+    try:
+        from core.bot_commands import register_bot_commands
+        await register_bot_commands(bot)
+    except Exception:
+        logger.exception("Bot command registration failed")
 
     if PUBLIC_URL:
         webhook_url = PUBLIC_URL.rstrip("/") + WEBHOOK_PATH
@@ -116,6 +139,26 @@ def build_web_app(dp=None, bot=None) -> web.Application:
             return web.json_response({"woke": False, "error": str(e)}, status=500)
 
     app.router.add_get("/wake", wake)
+
+    # Explicit draw runner for external cron (recommended for serverless and
+    # as a safety net on long-running hosts). Protected by WEBHOOK_SECRET.
+    # Example: curl -H "X-Webhook-Secret: $WEBHOOK_SECRET" https://app/run-draws
+    async def run_draws(request: web.Request) -> web.Response:
+        provided = request.query.get("secret") or request.headers.get("X-Webhook-Secret")
+        if WEBHOOK_SECRET and provided != WEBHOOK_SECRET:
+            return web.json_response({"error": "invalid secret"}, status=403)
+        bot = request.app.get("bot")
+        if not bot:
+            return web.json_response({"error": "bot not ready"}, status=503)
+        try:
+            result = await _run_due_draws_forced(bot)
+            return web.json_response({"ok": True, **result})
+        except Exception as e:
+            logger.exception("Forced /run-draws failed")
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+    app.router.add_get("/run-draws", run_draws)
+    app.router.add_post("/run-draws", run_draws)
 
     # Register webhook on-demand (idempotent). Protect this endpoint with
     # the same WEBHOOK_SECRET used for incoming webhook validation. Call
